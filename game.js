@@ -1,4 +1,4 @@
-/* Version: #4 */
+/* Version: #7 */
 // === OPPSETT OG KONFIGURASJON ===
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -7,6 +7,10 @@ const ctx = canvas.getContext('2d');
 const startScreen = document.getElementById('start-screen');
 const gameWrapper = document.getElementById('game-wrapper');
 const startBtn = document.getElementById('start-game-btn');
+const messageOverlay = document.getElementById('message-overlay');
+const messageTitle = document.getElementById('message-title');
+const messageText = document.getElementById('message-text');
+const messageBtn = document.getElementById('message-btn');
 
 // UI-visning av stats
 const uiAge = document.getElementById('age-display');
@@ -18,6 +22,7 @@ const uiWave = document.getElementById('wave-display');
 let gameActive = false;
 let animationId;
 let frameCount = 0; // Teller antall frames for tidsstyring
+let enemies = [];   // Liste over alle aktive fiender
 
 // Spillerens stats (Startverdier)
 let playerStats = {
@@ -29,22 +34,29 @@ let playerStats = {
 
 // === KART OG VEI (Pathing) ===
 // En enkel svingete vei for "Barndom" nivået.
-// Koordinater er x, y. Fiender vil bevege seg fra punkt til punkt.
 const waypoints = [
-    { x: 0, y: 100 },      // Start (Venstre side, litt opp)
-    { x: 200, y: 100 },    // Går rett frem
-    { x: 200, y: 400 },    // Svinger ned
-    { x: 500, y: 400 },    // Svinger høyre
-    { x: 500, y: 200 },    // Svinger opp
-    { x: 800, y: 200 }     // Slutt (Høyre side)
+    { x: 0, y: 100 },      // Start
+    { x: 200, y: 100 },    
+    { x: 200, y: 400 },    
+    { x: 500, y: 400 },    
+    { x: 500, y: 200 },    
+    { x: 800, y: 200 }     // Slutt
 ];
 
 // === INITIALISERING ===
 
 // Lytter etter start-knappen
 startBtn.addEventListener('click', () => {
-    console.log("Start-knapp trykket. Starter spillet...");
     initGame();
+});
+
+// Lytter etter overlay-knappen (Game Over / Info)
+messageBtn.addEventListener('click', () => {
+    messageOverlay.classList.add('hidden');
+    if (playerStats.hp <= 0) {
+        // Hvis vi klikker etter game over, reset spillet
+        location.reload(); 
+    }
 });
 
 function initGame() {
@@ -52,18 +64,18 @@ function initGame() {
     startScreen.classList.add('hidden');
     gameWrapper.classList.remove('hidden');
     
-    // 2. Sett startverdier
+    // 2. Reset variabler
     gameActive = true;
     playerStats.age = 0;
     playerStats.hp = 100;
     playerStats.atp = 150;
+    playerStats.wave = 1;
+    frameCount = 0;
+    enemies = []; // Tøm listen over fiender
     
-    // 3. Oppdater UI med en gang
     updateUI();
     
-    console.log("Spill initialisert. Stats:", playerStats);
-
-    // 4. Start loopen
+    console.log("Spill initialisert.");
     animate();
 }
 
@@ -71,48 +83,93 @@ function initGame() {
 function animate() {
     if (!gameActive) return;
 
-    // Kaller seg selv på nytt (60 ganger i sekundet)
     animationId = requestAnimationFrame(animate);
     
-    // Tømmer hele lerretet før vi tegner på nytt
+    // Tøm lerretet
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Tegn spillbrettet (Bakgrunn og vei)
+    // 1. Tegn banen
     drawBoard();
 
-    // Logikk som kjører over tid (f.eks. alder)
+    // 2. Håndter fiender
+    handleEnemies();
+
+    // 3. Logikk for alder og ressurser over tid
     frameCount++;
-    if (frameCount % 600 === 0) { // Hvert 10. sekund (ca) øker alderen
+    
+    // Øk alder hvert 10. sekund (600 frames)
+    if (frameCount % 600 === 0) { 
         playerStats.age += 1;
-        console.log("Alder økte til:", playerStats.age);
         updateUI();
+    }
+
+    // Spawn fiender (Midlertidig enkel logikk: Spawn hver 100. frame)
+    if (frameCount % 100 === 0) {
+        spawnEnemy();
+    }
+    
+    // Sjekk om spillet er tapt
+    if (playerStats.hp <= 0) {
+        gameOver();
     }
 }
 
-// === TEGNE-FUNKSJONER ===
+// === FIENDE-HÅNDTERING ===
+function spawnEnemy() {
+    // 10% sjanse for bakterie, ellers virus (i starten)
+    const type = (Math.random() > 0.9) ? 'bacteria' : 'virus';
+    enemies.push(new Enemy(waypoints, type));
+}
 
+function handleEnemies() {
+    // Vi itererer baklengs gjennom listen for trygt å kunne fjerne elementer
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        
+        // Flytt fienden og sjekk status
+        const status = enemy.update();
+        
+        // Tegn fienden
+        enemy.draw(ctx);
+
+        // Hvis fienden er fremme ved slutten
+        if (status === 'finished') {
+            playerStats.hp -= 10; // Mist helse
+            updateUI();
+            enemies.splice(i, 1); // Fjern fra listen
+        }
+    }
+}
+
+function gameOver() {
+    gameActive = false;
+    cancelAnimationFrame(animationId);
+    
+    messageTitle.innerText = "GAME OVER";
+    messageText.innerText = `Du overlevde til du ble ${playerStats.age} år gammel. Patogenene vant denne gangen.`;
+    messageBtn.innerText = "Prøv igjen";
+    messageOverlay.classList.remove('hidden');
+}
+
+// === TEGNE-FUNKSJONER ===
 function drawBoard() {
-    // 1. Tegn veien (Blodåren)
+    // Tegn veien (Blodåren)
     ctx.beginPath();
-    ctx.lineWidth = 60; // Bredden på veien
-    ctx.strokeStyle = "#5a1a1a"; // Mørkere rød for selve "grøfta"/åren
+    ctx.lineWidth = 60; 
+    ctx.strokeStyle = "#5a1a1a"; 
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
-    // Flytt til startpunktet
     ctx.moveTo(waypoints[0].x, waypoints[0].y);
-
-    // Tegn linjer til hvert punkt i listen
     for (let i = 1; i < waypoints.length; i++) {
         ctx.lineTo(waypoints[i].x, waypoints[i].y);
     }
-    
-    ctx.stroke(); // Tegn selve streken
+    ctx.stroke(); 
 
-    // 2. Tegn en "guide-linje" i midten (hjelp for oss utviklere for å se banen tydelig)
+    // Guide-linje
     ctx.beginPath();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
     ctx.moveTo(waypoints[0].x, waypoints[0].y);
     for (let i = 1; i < waypoints.length; i++) {
         ctx.lineTo(waypoints[i].x, waypoints[i].y);
@@ -120,14 +177,20 @@ function drawBoard() {
     ctx.stroke();
 }
 
-// === HJELPEFUNKSJONER ===
+// === UI OPPDATERING ===
 function updateUI() {
     uiAge.innerText = playerStats.age;
     uiHp.innerText = playerStats.hp;
     uiAtp.innerText = playerStats.atp;
     uiWave.innerText = playerStats.wave;
+    
+    // Endre farge på HP hvis den er lav
+    if (playerStats.hp < 30) {
+        uiHp.style.color = 'red';
+    } else {
+        uiHp.style.color = '#32cd32';
+    }
 }
 
-// Log at filen er lastet
-console.log("game.js lastet (Versjon #4). Klar til start.");
-/* Version: #4 */
+console.log("game.js lastet (Versjon #7). Fiender aktivert.");
+/* Version: #7 */
