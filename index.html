@@ -1,0 +1,122 @@
+<!-- Version: #2 -->
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathogen Patrol - Immunforsvaret</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- STARTSIDE / LANDING PAGE -->
+    <div id="start-screen">
+        <div class="intro-content">
+            <h1>PATHOGEN PATROL</h1>
+            <p class="subtitle">Et strategispill om kroppens immunforsvar</p>
+            
+            <div class="info-box">
+                <p>Du er sjefen for kroppens forsvarssystem.</p>
+                <p>Beskytt kroppen gjennom et helt livsløp – fra barndom til alderdom.</p>
+                <ul>
+                    <li>Bygg barrierer som <strong>Hud</strong> og <strong>Slimhinner</strong>.</li>
+                    <li>Mobiliser <strong>Makrofager</strong> for å spise inntrengere.</li>
+                    <li>Utvikle avanserte <strong>B- og T-celler</strong> mot farlige virus.</li>
+                    <li>Bruk <strong>Vaksiner</strong> og <strong>Antibiotika</strong> klokt!</li>
+                </ul>
+            </div>
+
+            <button id="start-game-btn" class="big-btn">START SPILLET</button>
+        </div>
+    </div>
+
+    <!-- SELVE SPILLET (Skjult i starten) -->
+    <div id="game-wrapper" class="hidden">
+        
+        <!-- TOPP-PANEL: Informasjon om kroppens tilstand -->
+        <header id="top-bar">
+            <div class="stat-box">
+                <span class="label">Alder:</span>
+                <span id="age-display" class="value">0</span> 
+                <span class="unit">år</span>
+            </div>
+            <div class="stat-box">
+                <span class="label">Helse:</span>
+                <span id="hp-display" class="value">100</span>
+                <span class="unit">%</span>
+            </div>
+            <div class="stat-box">
+                <span class="label">ATP (Energi):</span>
+                <span id="atp-display" class="value">150</span>
+            </div>
+            <div class="stat-box">
+                <span class="label">Bølge:</span>
+                <span id="wave-display" class="value">1</span>
+            </div>
+        </header>
+
+        <!-- HOVED-SPILLOMRÅDE -->
+        <div id="canvas-container">
+            <!-- Selve spillbrettet -->
+            <canvas id="game-canvas" width="800" height="600"></canvas>
+            
+            <!-- Overlay for beskjeder (Game Over, Level Up, Resistens-varsel) -->
+            <div id="message-overlay" class="hidden">
+                <div class="message-content">
+                    <h2 id="message-title">Overskrift</h2>
+                    <p id="message-text">Her kommer viktig informasjon...</p>
+                    <button id="message-btn">Fortsett</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BUNN-PANEL: Kontroller for forsvar og medisin -->
+        <footer id="controls-bar">
+            
+            <!-- Gruppe 1: Barriere og Uspesifikt (Starten) -->
+            <div class="control-group">
+                <h3>Ytre/Uspesifikt</h3>
+                <div class="button-grid">
+                    <button class="tower-btn" id="btn-skin" title="Hud: Fysisk mur som blokkerer veien">Hud</button>
+                    <button class="tower-btn" id="btn-mucus" title="Slimhinner: Felle som bremser fiender">Slim</button>
+                    <button class="tower-btn" id="btn-macrophage" title="Makrofag: Spiser fiender i nærkamp">Makrofag</button>
+                </div>
+            </div>
+
+            <!-- Gruppe 2: Spesifikt Forsvar (Må låses opp) -->
+            <div class="control-group">
+                <h3>Spesifikt</h3>
+                <div class="button-grid">
+                    <button class="tower-btn locked" id="btn-t-helper" title="T-Hjelper: Forsterker celler rundt seg">T-Hjelp</button>
+                    <button class="tower-btn locked" id="btn-b-cell" title="B-Celle: Skyter antistoffer (lang rekkevidde)">B-Celle</button>
+                    <button class="tower-btn locked" id="btn-t-killer" title="T-Dreper: Høy skade mot sterke fiender">T-Drep</button>
+                </div>
+            </div>
+
+            <!-- Gruppe 3: Medisiner og Power-ups -->
+            <div class="control-group special-group">
+                <h3>Medisin</h3>
+                <div class="button-grid">
+                    <button class="action-btn" id="btn-vaccine" title="Vaksine: Gjør immunsystemet sterkere mot en fiende">Vaksine</button>
+                    
+                    <!-- Antibiotika med resistens-måler -->
+                    <div class="antibiotics-wrapper">
+                        <button class="action-btn" id="btn-antibiotics" title="Antibiotika: Dreper alle bakterier (OBS: Resistensfare!)">Antibiotika</button>
+                        <div class="resistance-info">
+                            <span class="res-label">Resistens:</span>
+                            <div class="progress-bar-bg">
+                                <div id="resistance-bar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </footer>
+    </div>
+
+    <!-- Hovedscript for spillet -->
+    <script src="game.js"></script>
+</body>
+</html>
+<!-- Version: #2 -->
