@@ -1,40 +1,41 @@
-/* Version: #5 */
+/* Version: #12 */
 class Enemy {
     constructor(waypoints, type = 'virus') {
         // Lagre veien fienden skal gå
         this.waypoints = waypoints;
-        this.waypointIndex = 0; // Hvilket punkt i veien vi er på vei mot nå
+        this.waypointIndex = 0; 
 
-        // Startposisjon (Alltid første punkt i veien)
+        // Startposisjon
         this.x = waypoints[0].x;
         this.y = waypoints[0].y;
         
-        // Egenskaper basert på type
+        // Egenskaper
         this.type = type;
-        this.radius = 15; // Størrelse
-        this.speed = 0;
+        this.radius = 15;
+        this.baseSpeed = 0; // Ny variabel: Husker originalfarten
+        this.speed = 0;     // Nåværende fart (kan endres av slim)
         this.health = 0;
         this.maxHealth = 0;
-        this.moneyValue = 0; // Hvor mye energi vi får når den dør
+        this.moneyValue = 0; 
 
         this.initTypeProperties();
         
-        console.log(`Ny fiende skapt: ${this.type} ved startpunkt (${this.x}, ${this.y})`);
+        // Sett startfart lik basefart
+        this.speed = this.baseSpeed;
     }
 
-    // Sett stats basert på om det er virus eller bakterie
     initTypeProperties() {
         if (this.type === 'virus') {
-            this.speed = 2.0;       // Rask
-            this.health = 20;       // Svak
-            this.moneyValue = 5;    // Gir litt penger
-            this.color = '#8e44ad'; // Lilla (Virus-aktig)
+            this.baseSpeed = 2.0;   
+            this.health = 20;       
+            this.moneyValue = 5;    
+            this.color = '#8e44ad'; 
             this.radius = 12;
         } else if (this.type === 'bacteria') {
-            this.speed = 1.0;       // Treg
-            this.health = 50;       // Sterk
+            this.baseSpeed = 1.0;   
+            this.health = 50;       
             this.moneyValue = 10;
-            this.color = '#27ae60'; // Grønn (Bakterie-aktig)
+            this.color = '#27ae60'; 
             this.radius = 18;
         }
         this.maxHealth = this.health;
@@ -49,7 +50,6 @@ class Enemy {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Tegn helsebar over hodet
         this.drawHealthBar(ctx);
     }
 
@@ -58,47 +58,80 @@ class Enemy {
         const barWidth = 30;
         const barHeight = 4;
         
-        // Bakgrunn (rød)
         ctx.fillStyle = 'red';
         ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - 10, barWidth, barHeight);
         
-        // Helse (grønn)
         ctx.fillStyle = '#32cd32';
         ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - 10, barWidth * hpPercent, barHeight);
     }
 
-    update() {
-        // Finn målet vi skal gå mot
+    // VIKTIG: update tar nå imot listen over tårn for å sjekke kollisjon
+    update(towers) {
+        // 1. Reset fart til normal før vi sjekker modifikatorer (slim)
+        this.speed = this.baseSpeed;
+        let isBlocked = false;
+
+        // 2. Sjekk kollisjon med tårn (Hud og Slim)
+        if (towers) {
+            for (const tower of towers) {
+                // Enkel sirkel-kollisjon sjekk
+                const dx = this.x - tower.x;
+                const dy = this.y - tower.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+
+                // Sjekk om vi treffer tårnet (med litt margin)
+                // Bruker tower.width for firkanter (Hud) og tower.range for sirkler (Slim)
+                let collisionDist = (tower.type === 'barrier') ? 30 : tower.range;
+                
+                if (distance < collisionDist) {
+                    
+                    if (tower.type === 'barrier') {
+                        // Vi har truffet en vegg (Hud)!
+                        isBlocked = true;
+                        this.speed = 0;
+                        
+                        // Skad muren litt hver frame
+                        tower.health -= 0.5; 
+                    } 
+                    else if (tower.type === 'trap') {
+                        // Vi er i slim!
+                        this.speed *= tower.slowFactor;
+                    }
+                }
+            }
+        }
+
+        // Hvis vi er blokkert av en vegg, ikke beveg oss mot neste waypoint
+        if (isBlocked) {
+            return 'blocked';
+        }
+
+        // --- NORMAL BEVEGELSE (som før) ---
+
         const target = this.waypoints[this.waypointIndex + 1];
 
-        // Hvis vi ikke har flere mål, er vi fremme ved slutten (returner true for å signalisere dette)
         if (!target) {
             return 'finished';
         }
 
-        // Beregn avstand og retning til neste punkt
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Hvis vi er veldig nærme punktet, bytt til neste punkt
         if (distance < 5) {
             this.waypointIndex++;
-            // Sjekk om vi er ferdige etter byttet
             if (this.waypointIndex >= this.waypoints.length - 1) {
                 return 'finished';
             }
         }
 
-        // Flytt fienden mot målet
-        // Vi bruker normalisering av vektoren (dx/distance) ganget med fart
         const moveX = (dx / distance) * this.speed;
         const moveY = (dy / distance) * this.speed;
 
         this.x += moveX;
         this.y += moveY;
         
-        return 'active'; // Fienden er fortsatt i live og på banen
+        return 'active';
     }
 }
-/* Version: #5 */
+/* Version: #12 */
