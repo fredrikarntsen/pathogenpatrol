@@ -1,4 +1,4 @@
-/* Version: #17 */
+/* Version: #18 */
 // === OPPSETT OG KONFIGURASJON ===
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -19,9 +19,12 @@ const btnMacrophage = document.getElementById('btn-macrophage');
 const btnTHelper = document.getElementById('btn-t-helper');
 const btnBCell = document.getElementById('btn-b-cell');
 const btnTKiller = document.getElementById('btn-t-killer');
-
-// Samling av knapper for spesifikt forsvar (for enkel opplåsing)
 const specificDefenseBtns = [btnTHelper, btnBCell, btnTKiller];
+
+// Medisin-knapper og UI
+const btnVaccine = document.getElementById('btn-vaccine');
+const btnAntibiotics = document.getElementById('btn-antibiotics');
+const resistanceBar = document.getElementById('resistance-bar');
 
 // UI-visning
 const uiAge = document.getElementById('age-display');
@@ -35,18 +38,29 @@ let animationId;
 let frameCount = 0;
 let enemies = [];
 let towers = []; 
-let projectiles = []; // NYTT: Liste for kuler/gift
+let projectiles = [];
 let selectedTowerType = null; 
-let specificDefenseUnlocked = false; // Holder styr på om vi er voksne nok
+let specificDefenseUnlocked = false;
+
+// MEDISIN VARIABLER
+let antibioticResistance = 0; // 0 til 100
+let bacteriaResistant = false; // Blir true hvis resistens når 100
+let isVaccineTargeting = false; // Er vi i "velg fiende for vaksine" modus?
+let vaccinatedTypes = []; // Liste over typer vi har vaksinert mot (f.eks. ['virus'])
 
 // Priser
 const TOWER_COSTS = {
     skin: 20,
     mucus: 30,
     macrophage: 50,
-    thelper: 100, // Dyrere
+    thelper: 100,
     bcell: 120,
     tkiller: 150
+};
+
+const MED_COSTS = {
+    vaccine: 100,
+    antibiotics: 100
 };
 
 // Spillerens stats
@@ -67,13 +81,16 @@ const waypoints = [
     { x: 800, y: 200 }     
 ];
 
-// === INPUT HÅNDTERING (MUS) ===
+// === INPUT HÅNDTERING (TÅRN) ===
 
 function selectTower(type) {
-    // Sjekk om tårnet er låst (Spesifikt forsvar før alder 15)
+    // Avbryt vaksine-modus hvis den er aktiv
+    isVaccineTargeting = false; 
+    document.body.style.cursor = "default";
+
     if (['thelper', 'bcell', 'tkiller'].includes(type) && !specificDefenseUnlocked) {
         console.log("Dette forsvaret er ikke utviklet enda!");
-        return; // Gjør ingenting
+        return;
     }
 
     if (playerStats.atp >= TOWER_COSTS[type]) {
@@ -81,13 +98,12 @@ function selectTower(type) {
         console.log(`Valgt: ${type}. Klikk på brettet.`);
         document.body.style.cursor = "crosshair";
     } else {
-        console.log("Ikke nok ATP!");
+        alert("Ikke nok ATP!");
         selectedTowerType = null;
         document.body.style.cursor = "default";
     }
 }
 
-// Koble knapper
 btnSkin.addEventListener('click', () => selectTower('skin'));
 btnMucus.addEventListener('click', () => selectTower('mucus'));
 btnMacrophage.addEventListener('click', () => selectTower('macrophage'));
@@ -95,26 +111,127 @@ btnTHelper.addEventListener('click', () => selectTower('thelper'));
 btnBCell.addEventListener('click', () => selectTower('bcell'));
 btnTKiller.addEventListener('click', () => selectTower('tkiller'));
 
-// Klikk på kartet for å bygge
+// === INPUT HÅNDTERING (MEDISIN) ===
+
+// 1. ANTIBIOTIKA
+btnAntibiotics.addEventListener('click', () => {
+    // Sjekk kostnad
+    if (playerStats.atp < MED_COSTS.antibiotics) {
+        alert("Ikke nok ATP til antibiotika (Koster 100).");
+        return;
+    }
+
+    // Sjekk resistens
+    if (bacteriaResistant) {
+        alert("Antibiotika virker ikke! Bakteriene er resistente.");
+        return;
+    }
+
+    // Sjekk om det finnes bakterier på skjermen
+    const bacteriaOnScreen = enemies.filter(e => e.type === 'bacteria');
+    
+    if (bacteriaOnScreen.length === 0) {
+        alert("Ingen bakterier å drepe! Antibiotika virker IKKE på virus.");
+        return; // Ikke bruk penger eller øk resistens hvis det er bom
+    }
+
+    // UTFØR BEHANDLING
+    playerStats.atp -= MED_COSTS.antibiotics;
+    
+    // Øk resistens kraftig
+    antibioticResistance += 25;
+    if (antibioticResistance > 100) antibioticResistance = 100;
+
+    // Drep alle bakterier
+    let killCount = 0;
+    enemies.forEach(enemy => {
+        if (enemy.type === 'bacteria') {
+            enemy.health = 0; // Dør umiddelbart
+            killCount++;
+        }
+    });
+
+    console.log(`Antibiotika brukt. Drepte ${killCount} bakterier. Resistens: ${antibioticResistance}%`);
+    updateUI();
+});
+
+// 2. VAKSINE
+btnVaccine.addEventListener('click', () => {
+    if (playerStats.atp < MED_COSTS.vaccine) {
+        alert("Ikke nok ATP til vaksine (Koster 100).");
+        return;
+    }
+
+    // Aktiver sikte-modus
+    isVaccineTargeting = true;
+    selectedTowerType = null; // Avbryt evt. bygging
+    document.body.style.cursor = "help"; // Endre cursor til spørsmålstegn/sikte
+    console.log("Vaksine-modus: Klikk på en fiende for å utvikle immunitet.");
+});
+
+
+// === KLIKK PÅ CANVAS (BYGGING OG VAKSINE) ===
 canvas.addEventListener('click', (e) => {
-    if (!gameActive || !selectedTowerType) return;
+    if (!gameActive) return;
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const cost = TOWER_COSTS[selectedTowerType];
-    
-    if (playerStats.atp >= cost) {
-        if (isPositionValid(x, y, selectedTowerType)) {
-            buildTower(x, y, selectedTowerType, cost);
-        } else {
-            console.log("Ugyldig plassering!");
+
+    // Scenario A: Vi prøver å vaksinere (klikke på fiende)
+    if (isVaccineTargeting) {
+        // Sjekk om vi traff en fiende
+        for (const enemy of enemies) {
+            const dist = Math.sqrt((enemy.x - x)**2 + (enemy.y - y)**2);
+            if (dist < enemy.radius + 10) { // Litt margin
+                // Traff!
+                applyVaccine(enemy.type);
+                return;
+            }
         }
-    } else {
-        selectedTowerType = null;
-        document.body.style.cursor = "default";
+        // Bommet
+        console.log("Ingen fiende truffet.");
+        return;
+    }
+
+    // Scenario B: Vi bygger tårn
+    if (selectedTowerType) {
+        const cost = TOWER_COSTS[selectedTowerType];
+        if (playerStats.atp >= cost) {
+            if (isPositionValid(x, y, selectedTowerType)) {
+                buildTower(x, y, selectedTowerType, cost);
+            } else {
+                console.log("Ugyldig plassering!");
+            }
+        } else {
+            selectedTowerType = null;
+            document.body.style.cursor = "default";
+        }
     }
 });
+
+function applyVaccine(type) {
+    if (vaccinatedTypes.includes(type)) {
+        alert(`Du har allerede vaksinert mot ${type}!`);
+        isVaccineTargeting = false;
+        document.body.style.cursor = "default";
+        return;
+    }
+
+    // Betal
+    playerStats.atp -= MED_COSTS.vaccine;
+    
+    // Legg til i listen
+    vaccinatedTypes.push(type);
+    
+    // Reset cursor
+    isVaccineTargeting = false;
+    document.body.style.cursor = "default";
+
+    // Vis beskjed
+    alert(`Vaksine utviklet! Fremtidige ${type} vil være mye svakere.`);
+    updateUI();
+}
 
 function buildTower(x, y, type, cost) {
     switch (type) {
@@ -132,7 +249,6 @@ function buildTower(x, y, type, cost) {
 
 // === LOGIKK FOR PLASSERING ===
 function isPositionValid(x, y, type) {
-    // 1. Sjekk kollisjon med andre tårn
     for (const tower of towers) {
         const dx = tower.x - x;
         const dy = tower.y - y;
@@ -140,10 +256,8 @@ function isPositionValid(x, y, type) {
         if (dist < 30) return false;
     }
 
-    // 2. Sjekk forholdet til veien
     const pathRadius = 30; 
     let isOnPath = false;
-    
     for (let i = 0; i < waypoints.length - 1; i++) {
         const p1 = waypoints[i];
         const p2 = waypoints[i+1];
@@ -154,7 +268,6 @@ function isPositionValid(x, y, type) {
         }
     }
 
-    // REGEL: Hud/Slim PÅ veien, alt annet (celler) UTENFOR
     if (type === 'skin' || type === 'mucus') {
         return isOnPath;
     } else {
@@ -175,7 +288,6 @@ startBtn.addEventListener('click', () => initGame());
 
 messageBtn.addEventListener('click', () => {
     messageOverlay.classList.add('hidden');
-    // Hvis vi bare pauset for en beskjed, fortsett spillet (hvis hp > 0)
     if (playerStats.hp > 0) {
         gameActive = true;
         animate();
@@ -191,14 +303,18 @@ function initGame() {
     gameActive = true;
     playerStats = { age: 0, hp: 100, atp: 150, wave: 1 };
     
-    // Reset alt
     frameCount = 0;
     enemies = [];
     towers = [];
-    projectiles = []; // Tøm prosjektiler
+    projectiles = []; 
     specificDefenseUnlocked = false;
+    
+    // Reset medisin
+    antibioticResistance = 0;
+    bacteriaResistant = false;
+    vaccinatedTypes = [];
+    isVaccineTargeting = false;
 
-    // Lås knappene visuelt igjen ved omstart
     specificDefenseBtns.forEach(btn => btn.classList.add('locked'));
 
     updateUI();
@@ -214,15 +330,26 @@ function animate() {
 
     drawBoard();
     handleTowers();
-    handleProjectiles(); // NY: Håndter kuler
+    handleProjectiles();
     handleEnemies();
+
+    // Håndter antibiotika-resistens (synker sakte over tid)
+    // Synker 1% hvert 2. sekund (120 frames)
+    if (frameCount % 120 === 0 && antibioticResistance > 0 && !bacteriaResistant) {
+        antibioticResistance -= 1;
+        updateUI(); // Oppdater baren
+    }
+    // Sjekk om resistens er kritisk
+    if (antibioticResistance >= 100 && !bacteriaResistant) {
+        bacteriaResistant = true;
+        alert("ADVARSEL: Bakteriene har utviklet full resistens! Antibiotika virker ikke lenger.");
+    }
 
     frameCount++;
     
-    // Øk alder
     if (frameCount % 600 === 0) { 
         playerStats.age += 1;
-        checkUnlocks(); // Sjekk om vi skal låse opp nytt forsvar
+        checkUnlocks(); 
         updateUI();
     }
 
@@ -235,20 +362,14 @@ function animate() {
     }
 }
 
-// Sjekker om alder kvalifiserer til opplåsing
 function checkUnlocks() {
     if (playerStats.age >= 15 && !specificDefenseUnlocked) {
         specificDefenseUnlocked = true;
-        
-        // Fjern locked-klasse
         specificDefenseBtns.forEach(btn => btn.classList.remove('locked'));
-
-        // Pause spillet og vis beskjed
         gameActive = false;
         cancelAnimationFrame(animationId);
-        
         messageTitle.innerText = "Kroppen er moden!";
-        messageText.innerText = "Du har nådd 15 år. Det spesifikke immunforsvaret er utviklet! Du kan nå bygge B-celler, T-drepeceller og T-hjelpeceller.";
+        messageText.innerText = "Det spesifikke immunforsvaret er utviklet! Du kan nå bygge B-celler og T-drepeceller.";
         messageBtn.innerText = "Fortsett";
         messageOverlay.classList.remove('hidden');
     }
@@ -257,31 +378,23 @@ function checkUnlocks() {
 function handleTowers() {
     for (let i = towers.length - 1; i >= 0; i--) {
         const tower = towers[i];
-        
         if (tower.health !== undefined && tower.health <= 0) {
             towers.splice(i, 1);
             continue;
         }
-
-        // Få prosjektil i retur hvis tårnet skjøt
         const projectile = tower.update(enemies);
         if (projectile) {
             projectiles.push(projectile);
         }
-
         tower.draw(ctx);
     }
 }
 
-// NY FUNKSJON: Håndter prosjektiler
 function handleProjectiles() {
     for (let i = projectiles.length - 1; i >= 0; i--) {
         const p = projectiles[i];
-        
         p.update();
         p.draw(ctx);
-
-        // Fjern hvis den traff eller fienden døde før treff
         if (p.markedForDeletion) {
             projectiles.splice(i, 1);
         }
@@ -289,22 +402,38 @@ function handleProjectiles() {
 }
 
 function spawnEnemy() {
-    // Øk vanskelighetsgrad basert på alder?
-    // Start med mest virus, så bakterier
     let chanceForBacteria = 0.1;
     if (playerStats.age > 15) chanceForBacteria = 0.4;
     
     const type = (Math.random() > (1 - chanceForBacteria)) ? 'bacteria' : 'virus';
-    enemies.push(new Enemy(waypoints, type));
+    
+    // Lag fienden
+    const newEnemy = new Enemy(waypoints, type);
+
+    // Sjekk om vi har vaksine mot denne typen
+    if (vaccinatedTypes.includes(type)) {
+        // Vaksine-effekt: Halv helse
+        newEnemy.maxHealth = newEnemy.maxHealth / 2;
+        newEnemy.health = newEnemy.maxHealth;
+        // Visuell effekt for å vise at den er svekket? (F.eks. mindre)
+        newEnemy.radius *= 0.8; 
+    }
+
+    enemies.push(newEnemy);
 }
 
 function handleEnemies() {
     for (let i = enemies.length - 1; i >= 0; i--) {
         const enemy = enemies[i];
-        
-        // Send towers til update for kollisjon
         const status = enemy.update(towers); 
         
+        // Hvis bakterier er resistente, vis det visuelt
+        if (bacteriaResistant && enemy.type === 'bacteria') {
+            ctx.strokeStyle = "gold";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(enemy.x - enemy.radius, enemy.y - enemy.radius, enemy.radius*2, enemy.radius*2);
+        }
+
         enemy.draw(ctx);
 
         if (enemy.health <= 0) {
@@ -361,7 +490,17 @@ function updateUI() {
     
     if (playerStats.hp < 30) uiHp.style.color = 'red';
     else uiHp.style.color = '#32cd32';
+
+    // Oppdater resistens-bar
+    resistanceBar.style.width = antibioticResistance + '%';
+    if (antibioticResistance < 50) {
+        resistanceBar.style.backgroundColor = '#32cd32'; // Grønn
+    } else if (antibioticResistance < 80) {
+        resistanceBar.style.backgroundColor = 'orange';
+    } else {
+        resistanceBar.style.backgroundColor = 'red';
+    }
 }
 
-console.log("game.js lastet (Versjon #17). Spesifikt forsvar aktivert.");
-/* Version: #17 */
+console.log("game.js lastet (Versjon #18). Medisinmodul aktivert.");
+/* Version: #18 */
