@@ -1,4 +1,4 @@
-/* Version: #8 */
+/* Version: #11 */
 class Tower {
     constructor(x, y) {
         this.x = x;
@@ -7,49 +7,43 @@ class Tower {
         this.height = 32;
         this.range = 100;
         this.damage = 10;
-        this.fireRate = 0; // Teller ned til 0
-        this.cooldownSpeed = 1; // Hvor fort den lader
+        this.fireRate = 0; 
+        this.cooldownSpeed = 1; 
         this.target = null;
+        this.type = 'turret'; // Standard type (står ved siden av veien)
     }
 
     draw(ctx) {
-        // Generisk tegning (hvis vi glemmer å overstyre i sub-klasser)
         ctx.fillStyle = 'gray';
         ctx.fillRect(this.x - 16, this.y - 16, this.width, this.height);
     }
 
     update(enemies) {
-        // Hvis tårnet er på "cooldown" (lader opp/fordøyer), tell ned
         if (this.fireRate > 0) {
             this.fireRate--;
             return;
         }
 
-        // Finn nærmeste fiende
         this.target = null;
         let minDistance = Infinity;
 
         for (const enemy of enemies) {
-            // Pytagoras for å finne avstand
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
-            // Sjekk om fienden er innenfor rekkevidde og nærmere enn forrige
             if (distance < this.range && distance < minDistance) {
                 this.target = enemy;
                 minDistance = distance;
             }
         }
 
-        // Hvis vi fant et mål, angrip!
         if (this.target) {
             this.attack(this.target);
         }
     }
 
     attack(enemy) {
-        // Denne funksjonen overskrives av de spesifikke tårnene
         console.log("Generisk tårn angriper");
     }
 }
@@ -59,39 +53,31 @@ class Macrophage extends Tower {
     constructor(x, y) {
         super(x, y);
         this.name = "Makrofag";
-        this.range = 70;      // Kort rekkevidde (må være nær)
-        this.damage = 25;     // Høy skade (et jafs)
-        this.maxCooldown = 60; // 1 sekund (60 frames) fordøyelsestid
-        this.color = '#ecf0f1'; // Hvit/Lys grå (Hvit blodcelle)
+        this.range = 70;      
+        this.damage = 25;     
+        this.maxCooldown = 60; 
+        this.color = '#ecf0f1'; 
+        this.type = 'turret'; // Plasseres utenfor veien
     }
 
     draw(ctx) {
-        // Tegn rekkevidde (kun hvis musen er over - kan legges til senere. Nå tegner vi svakt)
-        /*
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.stroke();
-        */
-
-        // Selve cellen (amorf form / sirkel)
+        // Cellen
         ctx.beginPath();
         ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
         ctx.fill();
         
-        // Kjerne (Nucleus)
+        // Kjerne
         ctx.beginPath();
         ctx.arc(this.x - 5, this.y - 5, 8, 0, Math.PI * 2);
-        ctx.fillStyle = '#bdc3c7'; // Mørkere grå
+        ctx.fillStyle = '#bdc3c7'; 
         ctx.fill();
 
-        // Vis indikator hvis den fordøyer (Cooldown)
+        // Cooldown indikator
         if (this.fireRate > 0) {
             ctx.strokeStyle = 'orange';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            // Tegn en bue som viser hvor mye tid som er igjen
             const pct = this.fireRate / this.maxCooldown;
             ctx.arc(this.x, this.y, 22, -Math.PI/2, (Math.PI * 2 * pct) - Math.PI/2, true);
             ctx.stroke();
@@ -99,15 +85,86 @@ class Macrophage extends Tower {
     }
 
     attack(enemy) {
-        // "Spis" litt av fienden (gi skade)
         enemy.health -= this.damage;
-        
-        // Sett cooldown (fordøyelse)
         this.fireRate = this.maxCooldown;
-
-        // Visuell effekt? (Kan legges til senere, f.eks. at den blir større et øyeblikk)
     }
 }
 
-console.log("towers.js lastet (Versjon #8). Makrofag klar.");
-/* Version: #8 */
+// === HUD (Barriere / Mur) ===
+class Skin extends Tower {
+    constructor(x, y) {
+        super(x, y);
+        this.name = "Hud";
+        this.maxHealth = 200; // Tåler mye
+        this.health = 200;
+        this.type = 'barrier'; // Plasseres PÅ veien
+        this.width = 40; // Bredere for å dekke veien
+        this.height = 40;
+    }
+
+    // Hud gjør ikke noe i update (den er passiv), så vi overskriver update til å være tom
+    update(enemies) {
+        // Hud gjør ingenting aktivt, den bare står der og tar skade
+        // (Logikken for at fienden stopper håndteres i enemies.js)
+    }
+
+    draw(ctx) {
+        // Tegn en "mur" av celler
+        ctx.fillStyle = '#e57373'; // Lys rød/hudfarge
+        ctx.fillRect(this.x - 20, this.y - 20, 40, 40);
+        
+        // Tegn celle-mønster (rutenett)
+        ctx.strokeStyle = '#c62828';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Loddrett strek
+        ctx.moveTo(this.x, this.y - 20);
+        ctx.lineTo(this.x, this.y + 20);
+        // Vannrett strek
+        ctx.moveTo(this.x - 20, this.y);
+        ctx.lineTo(this.x + 20, this.y);
+        ctx.stroke();
+
+        // Helsebar for muren
+        const hpPct = this.health / this.maxHealth;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(this.x - 20, this.y - 30, 40, 5);
+        ctx.fillStyle = '#32cd32';
+        ctx.fillRect(this.x - 20, this.y - 30, 40 * hpPct, 5);
+    }
+}
+
+// === SLIMHINNER (Felle / Slow) ===
+class Mucus extends Tower {
+    constructor(x, y) {
+        super(x, y);
+        this.name = "Slim";
+        this.type = 'trap'; // Plasseres PÅ veien
+        this.range = 50;    // Radius for effekten
+        this.slowFactor = 0.5; // Halverer farten
+    }
+
+    update(enemies) {
+        // Slim trenger ikke oppdateres på samme måte,
+        // men vi kan animere det eller la det tørke ut over tid senere.
+    }
+
+    draw(ctx) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 30, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(46, 204, 113, 0.5)'; // Gjennomsiktig grønn
+        ctx.fill();
+        
+        // Små bobler for å vise at det er slim
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(this.x - 10, this.y - 10, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.x + 15, this.y + 5, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+console.log("towers.js lastet (Versjon #11). Hud og Slim lagt til.");
+/* Version: #11 */
