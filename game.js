@@ -1,4 +1,4 @@
-/* Version: #13 */
+/* Version: #17 */
 // === OPPSETT OG KONFIGURASJON ===
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -16,6 +16,12 @@ const messageBtn = document.getElementById('message-btn');
 const btnSkin = document.getElementById('btn-skin');
 const btnMucus = document.getElementById('btn-mucus');
 const btnMacrophage = document.getElementById('btn-macrophage');
+const btnTHelper = document.getElementById('btn-t-helper');
+const btnBCell = document.getElementById('btn-b-cell');
+const btnTKiller = document.getElementById('btn-t-killer');
+
+// Samling av knapper for spesifikt forsvar (for enkel opplåsing)
+const specificDefenseBtns = [btnTHelper, btnBCell, btnTKiller];
 
 // UI-visning
 const uiAge = document.getElementById('age-display');
@@ -29,13 +35,18 @@ let animationId;
 let frameCount = 0;
 let enemies = [];
 let towers = []; 
+let projectiles = []; // NYTT: Liste for kuler/gift
 let selectedTowerType = null; 
+let specificDefenseUnlocked = false; // Holder styr på om vi er voksne nok
 
 // Priser
 const TOWER_COSTS = {
-    skin: 20,       // Billig
-    mucus: 30,      // Middels
-    macrophage: 50  // Dyrere
+    skin: 20,
+    mucus: 30,
+    macrophage: 50,
+    thelper: 100, // Dyrere
+    bcell: 120,
+    tkiller: 150
 };
 
 // Spillerens stats
@@ -58,24 +69,31 @@ const waypoints = [
 
 // === INPUT HÅNDTERING (MUS) ===
 
-// Funksjon for å velge tårn
 function selectTower(type) {
+    // Sjekk om tårnet er låst (Spesifikt forsvar før alder 15)
+    if (['thelper', 'bcell', 'tkiller'].includes(type) && !specificDefenseUnlocked) {
+        console.log("Dette forsvaret er ikke utviklet enda!");
+        return; // Gjør ingenting
+    }
+
     if (playerStats.atp >= TOWER_COSTS[type]) {
         selectedTowerType = type;
         console.log(`Valgt: ${type}. Klikk på brettet.`);
         document.body.style.cursor = "crosshair";
     } else {
         console.log("Ikke nok ATP!");
-        alert(`Ikke nok energi. ${type} koster ${TOWER_COSTS[type]} ATP.`);
         selectedTowerType = null;
         document.body.style.cursor = "default";
     }
 }
 
-// Koble knapper til funksjon
+// Koble knapper
 btnSkin.addEventListener('click', () => selectTower('skin'));
 btnMucus.addEventListener('click', () => selectTower('mucus'));
 btnMacrophage.addEventListener('click', () => selectTower('macrophage'));
+btnTHelper.addEventListener('click', () => selectTower('thelper'));
+btnBCell.addEventListener('click', () => selectTower('bcell'));
+btnTKiller.addEventListener('click', () => selectTower('tkiller'));
 
 // Klikk på kartet for å bygge
 canvas.addEventListener('click', (e) => {
@@ -84,21 +102,13 @@ canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
     const cost = TOWER_COSTS[selectedTowerType];
     
     if (playerStats.atp >= cost) {
-        // Sjekk om posisjonen er gyldig for DENNE typen tårn
         if (isPositionValid(x, y, selectedTowerType)) {
             buildTower(x, y, selectedTowerType, cost);
         } else {
             console.log("Ugyldig plassering!");
-            // Gi feedback basert på type
-            if (selectedTowerType === 'macrophage') {
-                alert("Makrofager må plasseres utenfor blodåren.");
-            } else {
-                alert("Hud og Slim må plasseres PÅ blodåren (veien).");
-            }
         }
     } else {
         selectedTowerType = null;
@@ -107,55 +117,48 @@ canvas.addEventListener('click', (e) => {
 });
 
 function buildTower(x, y, type, cost) {
-    if (type === 'macrophage') {
-        towers.push(new Macrophage(x, y));
-    } else if (type === 'skin') {
-        towers.push(new Skin(x, y));
-    } else if (type === 'mucus') {
-        towers.push(new Mucus(x, y));
+    switch (type) {
+        case 'skin': towers.push(new Skin(x, y)); break;
+        case 'mucus': towers.push(new Mucus(x, y)); break;
+        case 'macrophage': towers.push(new Macrophage(x, y)); break;
+        case 'thelper': towers.push(new THelper(x, y)); break;
+        case 'bcell': towers.push(new BCell(x, y)); break;
+        case 'tkiller': towers.push(new TKiller(x, y)); break;
     }
     
     playerStats.atp -= cost;
     updateUI();
-    
-    // Vi lar valget være aktivt for "quick build" (kan endres hvis ønskelig)
-    // selectedTowerType = null; 
-    // document.body.style.cursor = "default";
 }
 
 // === LOGIKK FOR PLASSERING ===
 function isPositionValid(x, y, type) {
-    // 1. Sjekk kollisjon med andre tårn (uansett type)
+    // 1. Sjekk kollisjon med andre tårn
     for (const tower of towers) {
         const dx = tower.x - x;
         const dy = tower.y - y;
         const dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < 30) return false; // For nærme et annet tårn
+        if (dist < 30) return false;
     }
 
     // 2. Sjekk forholdet til veien
-    const pathRadius = 30; // Radius på veien (halvparten av bredden)
+    const pathRadius = 30; 
     let isOnPath = false;
     
     for (let i = 0; i < waypoints.length - 1; i++) {
         const p1 = waypoints[i];
         const p2 = waypoints[i+1];
         const dist = distToSegment({x, y}, p1, p2);
-        
         if (dist < pathRadius) {
             isOnPath = true;
             break;
         }
     }
 
-    // REGEL: 
-    // Makrofag (Turret) -> Må være UTENFOR veien (!isOnPath)
-    // Hud/Slim (Barrier/Trap) -> Må være PÅ veien (isOnPath)
-    
-    if (type === 'macrophage') {
-        return !isOnPath;
-    } else {
+    // REGEL: Hud/Slim PÅ veien, alt annet (celler) UTENFOR
+    if (type === 'skin' || type === 'mucus') {
         return isOnPath;
+    } else {
+        return !isOnPath;
     }
 }
 
@@ -172,17 +175,32 @@ startBtn.addEventListener('click', () => initGame());
 
 messageBtn.addEventListener('click', () => {
     messageOverlay.classList.add('hidden');
-    if (playerStats.hp <= 0) location.reload(); 
+    // Hvis vi bare pauset for en beskjed, fortsett spillet (hvis hp > 0)
+    if (playerStats.hp > 0) {
+        gameActive = true;
+        animate();
+    } else {
+        location.reload(); 
+    }
 });
 
 function initGame() {
     startScreen.classList.add('hidden');
     gameWrapper.classList.remove('hidden');
+    
     gameActive = true;
     playerStats = { age: 0, hp: 100, atp: 150, wave: 1 };
+    
+    // Reset alt
     frameCount = 0;
     enemies = [];
     towers = [];
+    projectiles = []; // Tøm prosjektiler
+    specificDefenseUnlocked = false;
+
+    // Lås knappene visuelt igjen ved omstart
+    specificDefenseBtns.forEach(btn => btn.classList.add('locked'));
+
     updateUI();
     animate();
 }
@@ -196,11 +214,15 @@ function animate() {
 
     drawBoard();
     handleTowers();
-    handleEnemies(); // Sender nå tårnene inn her!
+    handleProjectiles(); // NY: Håndter kuler
+    handleEnemies();
 
     frameCount++;
+    
+    // Øk alder
     if (frameCount % 600 === 0) { 
         playerStats.age += 1;
+        checkUnlocks(); // Sjekk om vi skal låse opp nytt forsvar
         updateUI();
     }
 
@@ -213,24 +235,66 @@ function animate() {
     }
 }
 
+// Sjekker om alder kvalifiserer til opplåsing
+function checkUnlocks() {
+    if (playerStats.age >= 15 && !specificDefenseUnlocked) {
+        specificDefenseUnlocked = true;
+        
+        // Fjern locked-klasse
+        specificDefenseBtns.forEach(btn => btn.classList.remove('locked'));
+
+        // Pause spillet og vis beskjed
+        gameActive = false;
+        cancelAnimationFrame(animationId);
+        
+        messageTitle.innerText = "Kroppen er moden!";
+        messageText.innerText = "Du har nådd 15 år. Det spesifikke immunforsvaret er utviklet! Du kan nå bygge B-celler, T-drepeceller og T-hjelpeceller.";
+        messageBtn.innerText = "Fortsett";
+        messageOverlay.classList.remove('hidden');
+    }
+}
+
 function handleTowers() {
-    // Gå baklengs gjennom listen i tilfelle vi fjerner tårn (ødelagt hud)
     for (let i = towers.length - 1; i >= 0; i--) {
         const tower = towers[i];
         
-        // Sjekk om tårnet er ødelagt (Kun aktuelt for Hud)
         if (tower.health !== undefined && tower.health <= 0) {
-            towers.splice(i, 1); // Fjern muren
+            towers.splice(i, 1);
             continue;
         }
 
-        tower.update(enemies);
+        // Få prosjektil i retur hvis tårnet skjøt
+        const projectile = tower.update(enemies);
+        if (projectile) {
+            projectiles.push(projectile);
+        }
+
         tower.draw(ctx);
     }
 }
 
+// NY FUNKSJON: Håndter prosjektiler
+function handleProjectiles() {
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+        const p = projectiles[i];
+        
+        p.update();
+        p.draw(ctx);
+
+        // Fjern hvis den traff eller fienden døde før treff
+        if (p.markedForDeletion) {
+            projectiles.splice(i, 1);
+        }
+    }
+}
+
 function spawnEnemy() {
-    const type = (Math.random() > 0.9) ? 'bacteria' : 'virus';
+    // Øk vanskelighetsgrad basert på alder?
+    // Start med mest virus, så bakterier
+    let chanceForBacteria = 0.1;
+    if (playerStats.age > 15) chanceForBacteria = 0.4;
+    
+    const type = (Math.random() > (1 - chanceForBacteria)) ? 'bacteria' : 'virus';
     enemies.push(new Enemy(waypoints, type));
 }
 
@@ -238,7 +302,7 @@ function handleEnemies() {
     for (let i = enemies.length - 1; i >= 0; i--) {
         const enemy = enemies[i];
         
-        // VIKTIG ENDRING: Send "towers" til enemy.update()
+        // Send towers til update for kollisjon
         const status = enemy.update(towers); 
         
         enemy.draw(ctx);
@@ -299,5 +363,5 @@ function updateUI() {
     else uiHp.style.color = '#32cd32';
 }
 
-console.log("game.js lastet (Versjon #13). Hud og Slim aktivert.");
-/* Version: #13 */
+console.log("game.js lastet (Versjon #17). Spesifikt forsvar aktivert.");
+/* Version: #17 */
