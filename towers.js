@@ -1,4 +1,4 @@
-/* Version: #16 */
+/* Version: #19 */
 class Tower {
     constructor(x, y) {
         this.x = x;
@@ -11,6 +11,7 @@ class Tower {
         this.cooldownSpeed = 1; 
         this.target = null;
         this.type = 'turret'; 
+        this.isBuffed = false; // Ny egenskap: Er den buffet av T-Hjelper?
     }
 
     draw(ctx) {
@@ -18,11 +19,27 @@ class Tower {
         ctx.fillRect(this.x - 16, this.y - 16, this.width, this.height);
     }
 
-    update(enemies) {
+    // VIKTIG: Vi tar nå imot "allTowers" for å kunne samhandle
+    update(enemies, allTowers) {
+        // Beregn hastighet på lading
+        // Hvis vi er buffet, lader vi dobbelt så fort (minsker cooldown med 2 per frame i stedet for 1)
+        let cooldownReduction = this.isBuffed ? 2 : 1;
+        
         if (this.fireRate > 0) {
-            this.fireRate--;
-            return null; // Ingen handling mens vi lader
+            this.fireRate -= cooldownReduction;
+            if (this.fireRate < 0) this.fireRate = 0;
+            
+            // Hvis vi fortsatt lader, gjør ingenting mer, MEN behold isBuffed til neste sjekk
+            // (Vi resetter isBuffed helt til slutt i funksjonen eller lar den styres av THelper)
         }
+
+        // Reset isBuffed for NESTE frame (slik at buffen forsvinner hvis T-Hjelper fjernes)
+        // Men vi gjør det helt til slutt, eller vi lar T-Hjelper sette den på nytt hver frame.
+        // Strategi: Vi setter this.isBuffed = false HER, så må T-Hjelper sette den til true igjen hvis den er i nærheten.
+        this.isBuffed = false; 
+
+        // Sjekk om vi er klare til å skyte
+        if (this.fireRate > 0) return null;
 
         this.target = null;
         let minDistance = Infinity;
@@ -39,7 +56,6 @@ class Tower {
         }
 
         if (this.target) {
-            // VIKTIG: Returner resultatet av angrepet (f.eks. et prosjektil)
             return this.attack(this.target);
         }
         return null;
@@ -48,6 +64,17 @@ class Tower {
     attack(enemy) {
         console.log("Generisk tårn angriper");
         return null;
+    }
+
+    // Hjelpefunksjon for å tegne buff-effekt
+    drawBuffGlow(ctx) {
+        if (this.isBuffed) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 25, 0, Math.PI * 2);
+            ctx.strokeStyle = '#ffd700'; // Gull
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
     }
 }
 
@@ -64,6 +91,8 @@ class Macrophage extends Tower {
     }
 
     draw(ctx) {
+        this.drawBuffGlow(ctx); // Tegn gullring hvis buffet
+
         ctx.beginPath();
         ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
@@ -85,7 +114,6 @@ class Macrophage extends Tower {
     }
 
     attack(enemy) {
-        // Direkte skade (spising), ingen prosjektiler
         enemy.health -= this.damage;
         this.fireRate = this.maxCooldown;
         return null;
@@ -104,8 +132,9 @@ class Skin extends Tower {
         this.height = 40;
     }
 
-    update(enemies) {
-        // Passiv
+    update(enemies, allTowers) {
+        // Hud kan også buffes (f.eks. regenerere helse?), men vi holder det enkelt: Hud buffes ikke
+        this.isBuffed = false; 
         return null;
     }
 
@@ -140,7 +169,8 @@ class Mucus extends Tower {
         this.slowFactor = 0.5; 
     }
 
-    update(enemies) {
+    update(enemies, allTowers) {
+        this.isBuffed = false;
         return null;
     }
 
@@ -165,21 +195,21 @@ class BCell extends Tower {
     constructor(x, y) {
         super(x, y);
         this.name = "B-Celle";
-        this.range = 200;      // Lang rekkevidde
+        this.range = 200;      
         this.damage = 10;     
-        this.maxCooldown = 30; // Skyter 2 ganger i sekundet
-        this.color = '#3498db'; // Blå
+        this.maxCooldown = 30; 
+        this.color = '#3498db'; 
         this.type = 'turret';
     }
 
     draw(ctx) {
-        // Cellen
+        this.drawBuffGlow(ctx); // Gyllen ring hvis buff
+
         ctx.beginPath();
         ctx.arc(this.x, this.y, 18, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
         ctx.fill();
         
-        // Y-symbol på toppen (Antistoff fabrikk)
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -193,7 +223,6 @@ class BCell extends Tower {
 
     attack(enemy) {
         this.fireRate = this.maxCooldown;
-        // Returner et nytt prosjektil
         return new Projectile(this.x, this.y, enemy, 'antibody');
     }
 }
@@ -203,20 +232,21 @@ class TKiller extends Tower {
     constructor(x, y) {
         super(x, y);
         this.name = "T-Drep";
-        this.range = 140;      // Middels rekkevidde
-        this.damage = 40;      // Høy skade
-        this.maxCooldown = 50; // Tregere
-        this.color = '#e74c3c'; // Rød
+        this.range = 140;      
+        this.damage = 40;      
+        this.maxCooldown = 50; 
+        this.color = '#e74c3c'; 
         this.type = 'turret';
     }
 
     draw(ctx) {
+        this.drawBuffGlow(ctx);
+
         ctx.beginPath();
         ctx.arc(this.x, this.y, 18, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
         ctx.fill();
         
-        // Sikte/Kors på toppen (Killer)
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -229,12 +259,11 @@ class TKiller extends Tower {
 
     attack(enemy) {
         this.fireRate = this.maxCooldown;
-        // Returner gift-prosjektil
         return new Projectile(this.x, this.y, enemy, 'toxin');
     }
 }
 
-// === T-HJELPER (Placeholder - Support) ===
+// === T-HJELPER (Support / Buffer) ===
 class THelper extends Tower {
     constructor(x, y) {
         super(x, y);
@@ -242,15 +271,31 @@ class THelper extends Tower {
         this.range = 100;      // Buff radius
         this.color = '#9b59b6'; // Lilla
         this.type = 'turret';
+        this.pulseSize = 0;     // For animasjon
     }
 
     draw(ctx) {
+        // Tegn rekkevidde svakt
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(155, 89, 182, 0.2)';
+        ctx.stroke();
+
+        // Puls-animasjon
+        this.pulseSize += 0.5;
+        if (this.pulseSize > this.range) this.pulseSize = 0;
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.pulseSize, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(155, 89, 182, 0.1)'; // Svak puls
+        ctx.stroke();
+
+        // Selve cellen
         ctx.beginPath();
         ctx.arc(this.x, this.y, 16, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
         ctx.fill();
         
-        // Hjelpe-symbol (+)
         ctx.fillStyle = 'white';
         ctx.font = "20px Arial";
         ctx.textAlign = "center";
@@ -258,11 +303,25 @@ class THelper extends Tower {
         ctx.fillText("+", this.x, this.y + 2);
     }
 
-    update(enemies) {
-        // Denne gjør ingenting aktivt mot fiender foreløpig
+    update(enemies, allTowers) {
+        // VIKTIG: Finn naboer og buff dem
+        if (allTowers) {
+            for (const otherTower of allTowers) {
+                // Ikke buff seg selv, og ikke buff murer/slim (valgfritt)
+                if (otherTower === this || otherTower.type === 'barrier' || otherTower.type === 'trap') continue;
+
+                const dx = otherTower.x - this.x;
+                const dy = otherTower.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist < this.range) {
+                    otherTower.isBuffed = true; // Aktiver buffen på naboen
+                }
+            }
+        }
         return null; 
     }
 }
 
-console.log("towers.js lastet (Versjon #16). B-celler og T-drep lagt til.");
-/* Version: #16 */
+console.log("towers.js lastet (Versjon #19). T-Hjelper logikk aktivert.");
+/* Version: #19 */
