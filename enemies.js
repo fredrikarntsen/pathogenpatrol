@@ -1,15 +1,11 @@
-/* Version: #22 */
+/* Version: #29 */
 class Enemy {
-    constructor(waypoints, type = 'virus') {
-        // Lagre veien fienden skal gå
+    constructor(waypoints, type) {
         this.waypoints = waypoints;
         this.waypointIndex = 0; 
-
-        // Startposisjon
         this.x = waypoints[0].x;
         this.y = waypoints[0].y;
         
-        // Egenskaper
         this.type = type;
         this.radius = 15;
         this.baseSpeed = 0; 
@@ -20,63 +16,117 @@ class Enemy {
 
         this.initTypeProperties();
         
-        // Sett startfart lik basefart
         this.speed = this.baseSpeed;
     }
 
     initTypeProperties() {
-        if (this.type === 'virus') {
+        // VIRUS (Primærfarger)
+        if (this.type === 'virus_red') {
             this.baseSpeed = 2.0;   
             this.health = 20;       
             this.moneyValue = 5;    
-            this.color = '#8e44ad'; 
+            this.color = '#ff0000'; // Rød
             this.radius = 12;
-        } else if (this.type === 'bacteria') {
-            this.baseSpeed = 1.0;   
-            this.health = 50;       
-            this.moneyValue = 10;
-            this.color = '#27ae60'; 
-            this.radius = 18;
+            this.shape = 'circle';
+        } 
+        else if (this.type === 'virus_blue') {
+            this.baseSpeed = 2.5; // Raskere
+            this.health = 30;
+            this.moneyValue = 7;
+            this.color = '#0000ff'; // Blå
+            this.radius = 12;
+            this.shape = 'circle';
         }
+        else if (this.type === 'virus_yellow') {
+            this.baseSpeed = 3.0; // Raskest
+            this.health = 15;     // Svakere
+            this.moneyValue = 5;
+            this.color = '#ffff00'; // Gul
+            this.radius = 10;
+            this.shape = 'circle';
+        }
+        // BAKTERIER (Sekundærfarger og ulike former)
+        else if (this.type === 'bacteria_green') {
+            this.baseSpeed = 1.0;   
+            this.health = 60;       
+            this.moneyValue = 15;
+            this.color = '#00ff00'; // Grønn
+            this.radius = 18;
+            this.shape = 'circle'; // Standard
+        }
+        else if (this.type === 'bacteria_orange') {
+            this.baseSpeed = 1.2;
+            this.health = 80;
+            this.moneyValue = 20;
+            this.color = '#ffa500'; // Oransje
+            this.radius = 18;
+            this.shape = 'oval';
+        }
+        else if (this.type === 'bacteria_purple') {
+            this.baseSpeed = 0.8; // Treg
+            this.health = 120;    // Tank
+            this.moneyValue = 30;
+            this.color = '#800080'; // Lilla
+            this.radius = 20;
+            this.shape = 'triangle';
+        }
+
         this.maxHealth = this.health;
     }
 
     draw(ctx) {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
-        ctx.fill();
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
-        ctx.stroke();
+
+        if (this.shape === 'circle') {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        } 
+        else if (this.shape === 'oval') {
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y, this.radius, this.radius * 0.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+        else if (this.shape === 'triangle') {
+            ctx.beginPath();
+            // Tegn en likesidet trekant sentrert rundt x,y
+            ctx.moveTo(this.x, this.y - this.radius);
+            ctx.lineTo(this.x + this.radius, this.y + this.radius);
+            ctx.lineTo(this.x - this.radius, this.y + this.radius);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
 
         this.drawHealthBar(ctx);
     }
 
     drawHealthBar(ctx) {
-        // FIX: Bruk Math.max(0, ...) for å unngå negativ bredde hvis helsen går under 0
         const hpPercent = Math.max(0, this.health / this.maxHealth);
         
         const barWidth = 30;
         const barHeight = 4;
         
-        // Tegn rød bakgrunn
+        // Helsebaren tegnes litt høyere opp for trekant så den ikke dekker figuren
+        const yOffset = (this.shape === 'triangle') ? this.radius + 5 : 10;
+
         ctx.fillStyle = 'red';
-        ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - 10, barWidth, barHeight);
+        ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - yOffset, barWidth, barHeight);
         
-        // Tegn grønn helse (kun hvis hpPercent > 0)
         if (hpPercent > 0) {
             ctx.fillStyle = '#32cd32';
-            ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - 10, barWidth * hpPercent, barHeight);
+            ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - yOffset, barWidth * hpPercent, barHeight);
         }
     }
 
     update(towers) {
-        // 1. Reset fart
         this.speed = this.baseSpeed;
         let isBlocked = false;
 
-        // 2. Sjekk kollisjon med tårn
         if (towers) {
             for (const tower of towers) {
                 const dx = this.x - tower.x;
@@ -102,7 +152,6 @@ class Enemy {
             return 'blocked';
         }
 
-        // --- NORMAL BEVEGELSE ---
         const target = this.waypoints[this.waypointIndex + 1];
 
         if (!target) {
@@ -129,4 +178,4 @@ class Enemy {
         return 'active';
     }
 }
-/* Version: #22 */
+/* Version: #29 */
