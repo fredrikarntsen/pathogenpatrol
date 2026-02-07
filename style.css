@@ -1,17 +1,16 @@
-/* Version: #24 */
+/* Version: #28 */
 :root {
-    --bg-color: #2c0a0a; /* Mørk blodrød bakgrunn */
-    --panel-bg: #4a1515; /* Litt lysere rød for paneler */
-    --text-color: #ffe6e6; /* Lys rosa tekst */
-    --accent-color: #ff4d4d; /* Klar rød for viktige elementer */
+    --bg-color: #2c0a0a; 
+    --panel-bg: #4a1515; 
+    --text-color: #ffe6e6; 
+    --accent-color: #ff4d4d; 
     --highlight-color: #ffcccc; 
     --button-bg: #802020;
     --button-hover: #a03030;
     --locked-color: #3a1010;
     
-    /* Spesifikke farger for spill-elementer */
-    --color-atp: #ffd700; /* Gull for energi */
-    --color-hp: #32cd32; /* Grønn for helse */
+    --color-atp: #ffd700; 
+    --color-hp: #32cd32; 
     --color-res-low: #32cd32;
     --color-res-high: #ff0000;
 }
@@ -30,13 +29,10 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: hidden; /* Hindrer scrollbar under spill */
+    overflow: hidden; 
 }
 
-/* === GENERISKE KLASSER === */
-.hidden {
-    display: none !important;
-}
+.hidden { display: none !important; }
 
 button {
     cursor: pointer;
@@ -82,14 +78,8 @@ button {
     line-height: 1.6;
 }
 
-.info-box ul {
-    margin-top: 15px;
-    padding-left: 20px;
-}
-
-.info-box li {
-    margin-bottom: 8px;
-}
+.info-box ul { margin-top: 15px; padding-left: 20px; }
+.info-box li { margin-bottom: 8px; }
 
 .big-btn {
     padding: 15px 40px;
@@ -119,53 +109,75 @@ button {
 /* === TOPP PANEL (STATS) === */
 #top-bar {
     width: 100%;
-    display: flex;
-    justify-content: space-between;
     background-color: var(--panel-bg);
     padding: 10px 20px;
     border-radius: 10px 10px 0 0;
     border-bottom: 2px solid var(--locked-color);
+    display: flex;
+    flex-direction: column; /* Stack stats og vaksiner */
+    gap: 10px;
 }
 
-.stat-box {
-    font-size: 1.2rem;
-    font-weight: bold;
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
 }
 
-.stat-box .label {
-    color: #ccc;
-    font-size: 0.9rem;
-    margin-right: 5px;
-}
+.stat-box { font-size: 1.2rem; font-weight: bold; }
+.stat-box .label { color: #ccc; font-size: 0.9rem; margin-right: 5px; }
 
 #age-display { color: var(--highlight-color); }
 #hp-display { color: var(--color-hp); }
 #atp-display { color: var(--color-atp); }
 
-/* === CANVAS OMRÅDE === */
+/* Vaksine liste */
+#vaccine-container {
+    display: flex;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+    padding: 5px 10px;
+    border-radius: 5px;
+}
+
+#vaccine-container .label {
+    font-size: 0.8rem;
+    color: #ccc;
+    margin-right: 10px;
+}
+
+#vaccine-list {
+    display: flex;
+    gap: 5px;
+}
+
+.vaccine-badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid white;
+    box-shadow: 0 0 5px rgba(255,255,255,0.5);
+}
+
+/* === CANVAS === */
 #canvas-container {
-    position: relative; /* For overlay posisjonering */
+    position: relative; 
     border: 5px solid var(--panel-bg);
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    background-color: #1a0505; /* Veldig mørk bakgrunn for selve brettet */
+    background-color: #1a0505; 
 }
 
 #game-canvas {
     display: block;
-    background-image: radial-gradient(#2c0a0a 20%, #1a0505 80%); /* Enkel "cellevev" effekt */
+    background-image: radial-gradient(#2c0a0a 20%, #1a0505 80%); 
 }
 
-/* === OVERLAY (Meldinger) === */
+/* === OVERLAY === */
 #message-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: flex; justify-content: center; align-items: center;
     z-index: 100;
 }
 
@@ -192,12 +204,9 @@ button {
     border-radius: 5px;
     font-size: 1.1rem;
 }
+#message-btn:hover { background-color: var(--button-hover); }
 
-#message-btn:hover {
-    background-color: var(--button-hover);
-}
-
-/* === BUNN PANEL (KONTROLLER) === */
+/* === BUNN PANEL === */
 #controls-bar {
     width: 100%;
     background-color: var(--panel-bg);
@@ -231,10 +240,9 @@ button {
     justify-content: center;
 }
 
-/* Oppdatert knappestil for å vise pris */
 .tower-btn, .action-btn {
     display: flex;
-    flex-direction: column; /* Stack tekst og pris */
+    flex-direction: column; 
     align-items: center;
     justify-content: center;
     padding: 8px 10px;
@@ -242,7 +250,7 @@ button {
     background-color: var(--button-bg);
     color: white;
     font-size: 0.9rem;
-    min-width: 80px; /* Litt bredere */
+    min-width: 80px; 
     border: 1px solid rgba(255,255,255,0.1);
 }
 
@@ -257,46 +265,27 @@ button {
     cursor: not-allowed;
     opacity: 0.7;
 }
+.tower-btn.locked:hover { transform: none; background-color: var(--locked-color); }
 
-.tower-btn.locked:hover {
-    transform: none;
-    background-color: var(--locked-color);
-}
-
-/* Pris-tekst inne i knappen */
 .cost {
     font-size: 0.75rem;
     color: var(--color-atp);
     font-weight: bold;
     margin-top: 2px;
 }
+.tower-btn.locked .cost { color: #555; }
 
-.tower-btn.locked .cost {
-    color: #555; /* Grå pris hvis låst */
-}
-
-
-/* Spesialstyling for medisin */
+/* Medisin */
 .antibiotics-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 5px;
 }
+#btn-antibiotics { background-color: #2c3e50; }
+#btn-antibiotics:hover { background-color: #34495e; }
+#btn-vaccine { background-color: #27ae60; }
 
-#btn-antibiotics {
-    background-color: #2c3e50; 
-}
-
-#btn-antibiotics:hover {
-    background-color: #34495e;
-}
-
-#btn-vaccine {
-    background-color: #27ae60; 
-}
-
-/* Resistensbar */
 .resistance-info {
     width: 100%;
     font-size: 0.7rem;
@@ -318,4 +307,4 @@ button {
     background-color: var(--color-res-low);
     transition: width 0.3s ease, background-color 0.3s ease;
 }
-/* Version: #24 */
+/* Version: #28 */
