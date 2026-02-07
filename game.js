@@ -1,4 +1,4 @@
-/* Version: #30 */
+/* Version: #31 */
 // === OPPSETT OG KONFIGURASJON ===
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -30,7 +30,7 @@ const towerButtons = {
 const btnVaccine = document.getElementById('btn-vaccine');
 const btnAntibiotics = document.getElementById('btn-antibiotics');
 const resistanceBar = document.getElementById('resistance-bar');
-const vaccineList = document.getElementById('vaccine-list'); // NY: Liste for ikoner
+const vaccineList = document.getElementById('vaccine-list'); 
 
 // UI-visning
 const uiAge = document.getElementById('age-display');
@@ -72,15 +72,21 @@ const COST_SCALING = 1.2;
 let playerStats = { age: 0, hp: 100, atp: 150, wave: 1 };
 const waypoints = [ { x: 0, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 400 }, { x: 500, y: 400 }, { x: 500, y: 200 }, { x: 800, y: 200 } ];
 
-// === BØLGE KONFIGURASJON ===
-// Definerer hvilke fiender som er tilgjengelige i ulike bølger
+// === BØLGE KONFIGURASJON (OPPDATERT) ===
 function getAvailableEnemiesForWave(wave) {
-    if (wave <= 2) return ['virus_red'];
-    if (wave <= 5) return ['virus_red', 'virus_blue'];
-    if (wave <= 8) return ['virus_blue', 'virus_yellow'];
-    if (wave <= 12) return ['virus_yellow', 'bacteria_green'];
-    if (wave <= 15) return ['virus_blue', 'bacteria_green', 'bacteria_orange'];
-    // Fra bølge 16+ er alt med, inkludert lilla "boss"
+    // Bølge 1 (0-5 år): Introduksjon (Kun røde virus)
+    if (wave === 1) return ['virus_red'];
+    
+    // Bølge 2 (5-10 år): Miks! (Røde virus + Grønne bakterier)
+    if (wave === 2) return ['virus_red', 'bacteria_green'];
+    
+    // Bølge 3-5 (10-25 år): Økende intensitet (Blå virus kommer)
+    if (wave <= 5) return ['virus_red', 'virus_blue', 'bacteria_green'];
+    
+    // Bølge 6-9 (25-45 år): Svermer (Gule virus + Oransje bakterier)
+    if (wave <= 9) return ['virus_blue', 'virus_yellow', 'bacteria_green', 'bacteria_orange'];
+    
+    // Bølge 10+ (45+ år): Fullt kaos (Boss bakterier)
     return ['virus_red', 'virus_blue', 'virus_yellow', 'bacteria_green', 'bacteria_orange', 'bacteria_purple'];
 }
 
@@ -147,7 +153,7 @@ canvas.addEventListener('click', (e) => {
         for (const enemy of enemies) {
             const dist = Math.sqrt((enemy.x - x)**2 + (enemy.y - y)**2);
             if (dist < enemy.radius + 10) { 
-                applyVaccine(enemy); // Sender hele fiendeobjektet for å få fargen
+                applyVaccine(enemy); 
                 return;
             }
         }
@@ -180,7 +186,6 @@ function applyVaccine(enemy) {
     isVaccineTargeting = false;
     document.body.style.cursor = "default";
     
-    // Legg til ikon i UI
     const badge = document.createElement('div');
     badge.className = 'vaccine-badge';
     badge.style.backgroundColor = enemy.color;
@@ -264,7 +269,7 @@ function initGame() {
     bacteriaResistant = false;
     vaccinatedTypes = [];
     isVaccineTargeting = false;
-    vaccineList.innerHTML = ''; // Tøm vaksine-listen
+    vaccineList.innerHTML = '';
     currentCosts = { ...BASE_COSTS };
     updateCostDisplay();
     updateUI();
@@ -309,25 +314,29 @@ function animate() {
     if (frameCount % 600 === 0) { 
         playerStats.age += 1;
         checkAgeEvents(); 
-        
-        // Øk bølgen hvert 5. år
         if (playerStats.age % 5 === 0) {
             playerStats.wave++;
         }
-        
         updateUI();
     }
 
-    // --- SPAWN LOGIKK ---
-    // Spawn rate basert på bølge (blir raskere og raskere)
-    // Start: 120 (2 sek), Slutt: 40 (0.6 sek)
-    let spawnRate = Math.max(40, 120 - (playerStats.wave * 4)); 
+    // --- SPAWN LOGIKK (RASKERE!) ---
+    // Start på 90 frames (1.5 sek), går ned mot 20 frames (0.33 sek)
+    let spawnRate = Math.max(20, 90 - (playerStats.wave * 3)); 
     
     if (frameCount % spawnRate === 0) {
+        // Hoved-spawn
         spawnEnemy();
+        
+        // SVERM-LOGIKK: Sjanse for å spawne flere samtidig!
+        // Jo høyere bølge, jo større sjanse for "dobbel spawn"
+        let swarmChance = 0.2 + (playerStats.wave * 0.05); // Starter på 20%, øker til 50%+
+        if (Math.random() < swarmChance) {
+             // Spawn en til umiddelbart (liten forsinkelse visuelt bare pga frame, men i praksis samtidig)
+             spawnEnemy(); 
+        }
     }
 
-    // Medisin
     if (frameCount % 120 === 0 && antibioticResistance > 0 && !bacteriaResistant) {
         antibioticResistance -= 1;
         updateUI(); 
@@ -394,7 +403,6 @@ function handleProjectiles() {
 }
 
 function spawnEnemy() {
-    // Velg fra tilgjengelige fiender basert på bølge
     const availableTypes = getAvailableEnemiesForWave(playerStats.wave);
     const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
     
@@ -419,7 +427,6 @@ function handleEnemies() {
         const enemy = enemies[i];
         const status = enemy.update(towers); 
         
-        // Marker resistente bakterier
         if (bacteriaResistant && enemy.type.startsWith('bacteria')) {
             ctx.strokeStyle = "gold";
             ctx.lineWidth = 3;
@@ -479,5 +486,5 @@ function updateUI() {
     else resistanceBar.style.backgroundColor = 'red';
 }
 
-console.log("game.js lastet (Versjon #30). Bølger og fiendetyper.");
-/* Version: #30 */
+console.log("game.js lastet (Versjon #31). Høyere tempo og kaos!");
+/* Version: #31 */
