@@ -1,4 +1,4 @@
-<!-- Version: #15 -->
+<!-- Version: #25 -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -77,9 +77,18 @@
             <div class="control-group">
                 <h3>Ytre/Uspesifikt</h3>
                 <div class="button-grid">
-                    <button class="tower-btn" id="btn-skin" title="Hud: Fysisk mur som blokkerer veien">Hud</button>
-                    <button class="tower-btn" id="btn-mucus" title="Slimhinner: Felle som bremser fiender">Slim</button>
-                    <button class="tower-btn" id="btn-macrophage" title="Makrofag: Spiser fiender i nærkamp">Makrofag</button>
+                    <button class="tower-btn" id="btn-skin" title="Hud: Fysisk mur som blokkerer veien">
+                        Hud
+                        <span class="cost">20 ATP</span>
+                    </button>
+                    <button class="tower-btn" id="btn-mucus" title="Slimhinner: Felle som bremser fiender">
+                        Slim
+                        <span class="cost">30 ATP</span>
+                    </button>
+                    <button class="tower-btn" id="btn-macrophage" title="Makrofag: Spiser fiender i nærkamp">
+                        Makrofag
+                        <span class="cost">50 ATP</span>
+                    </button>
                 </div>
             </div>
 
@@ -87,9 +96,18 @@
             <div class="control-group">
                 <h3>Spesifikt</h3>
                 <div class="button-grid">
-                    <button class="tower-btn locked" id="btn-t-helper" title="T-Hjelper: Forsterker celler rundt seg">T-Hjelp</button>
-                    <button class="tower-btn locked" id="btn-b-cell" title="B-Celle: Skyter antistoffer (lang rekkevidde)">B-Celle</button>
-                    <button class="tower-btn locked" id="btn-t-killer" title="T-Dreper: Høy skade mot sterke fiender">T-Drep</button>
+                    <button class="tower-btn locked" id="btn-t-helper" title="T-Hjelper: Forsterker celler rundt seg">
+                        T-Hjelp
+                        <span class="cost">100 ATP</span>
+                    </button>
+                    <button class="tower-btn locked" id="btn-b-cell" title="B-Celle: Skyter antistoffer (lang rekkevidde)">
+                        B-Celle
+                        <span class="cost">120 ATP</span>
+                    </button>
+                    <button class="tower-btn locked" id="btn-t-killer" title="T-Dreper: Høy skade mot sterke fiender">
+                        T-Drep
+                        <span class="cost">150 ATP</span>
+                    </button>
                 </div>
             </div>
 
@@ -97,11 +115,17 @@
             <div class="control-group special-group">
                 <h3>Medisin</h3>
                 <div class="button-grid">
-                    <button class="action-btn" id="btn-vaccine" title="Vaksine: Gjør immunsystemet sterkere mot en fiende">Vaksine</button>
+                    <button class="action-btn" id="btn-vaccine" title="Vaksine: Gjør immunsystemet sterkere mot en fiende">
+                        Vaksine
+                        <span class="cost">100 ATP</span>
+                    </button>
                     
                     <!-- Antibiotika med resistens-måler -->
                     <div class="antibiotics-wrapper">
-                        <button class="action-btn" id="btn-antibiotics" title="Antibiotika: Dreper alle bakterier (OBS: Resistensfare!)">Antibiotika</button>
+                        <button class="action-btn" id="btn-antibiotics" title="Antibiotika: Dreper alle bakterier (OBS: Resistensfare!)">
+                            Antibiotika
+                            <span class="cost">100 ATP</span>
+                        </button>
                         <div class="resistance-info">
                             <span class="res-label">Resistens:</span>
                             <div class="progress-bar-bg">
@@ -122,4 +146,4 @@
     <script src="game.js"></script>
 </body>
 </html>
-<!-- Version: #15 -->
+<!-- Version: #25 -->
