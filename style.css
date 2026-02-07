@@ -1,4 +1,4 @@
-/* Version: #3 */
+/* Version: #24 */
 :root {
     --bg-color: #2c0a0a; /* Mørk blodrød bakgrunn */
     --panel-bg: #4a1515; /* Litt lysere rød for paneler */
@@ -231,13 +231,18 @@ button {
     justify-content: center;
 }
 
+/* Oppdatert knappestil for å vise pris */
 .tower-btn, .action-btn {
-    padding: 10px;
+    display: flex;
+    flex-direction: column; /* Stack tekst og pris */
+    align-items: center;
+    justify-content: center;
+    padding: 8px 10px;
     border-radius: 5px;
     background-color: var(--button-bg);
     color: white;
     font-size: 0.9rem;
-    min-width: 70px;
+    min-width: 80px; /* Litt bredere */
     border: 1px solid rgba(255,255,255,0.1);
 }
 
@@ -258,6 +263,19 @@ button {
     background-color: var(--locked-color);
 }
 
+/* Pris-tekst inne i knappen */
+.cost {
+    font-size: 0.75rem;
+    color: var(--color-atp);
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.tower-btn.locked .cost {
+    color: #555; /* Grå pris hvis låst */
+}
+
+
 /* Spesialstyling for medisin */
 .antibiotics-wrapper {
     display: flex;
@@ -267,7 +285,7 @@ button {
 }
 
 #btn-antibiotics {
-    background-color: #2c3e50; /* Blålig for medisin */
+    background-color: #2c3e50; 
 }
 
 #btn-antibiotics:hover {
@@ -275,7 +293,7 @@ button {
 }
 
 #btn-vaccine {
-    background-color: #27ae60; /* Grønn for vaksine */
+    background-color: #27ae60; 
 }
 
 /* Resistensbar */
@@ -300,4 +318,4 @@ button {
     background-color: var(--color-res-low);
     transition: width 0.3s ease, background-color 0.3s ease;
 }
-/* Version: #3 */
+/* Version: #24 */
