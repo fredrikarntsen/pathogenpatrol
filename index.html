@@ -1,4 +1,4 @@
-<!-- Version: #25 -->
+<!-- Version: #27 -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -35,23 +35,33 @@
         
         <!-- TOPP-PANEL: Informasjon om kroppens tilstand -->
         <header id="top-bar">
-            <div class="stat-box">
-                <span class="label">Alder:</span>
-                <span id="age-display" class="value">0</span> 
-                <span class="unit">år</span>
+            <div class="stats-row">
+                <div class="stat-box">
+                    <span class="label">Alder:</span>
+                    <span id="age-display" class="value">0</span> 
+                    <span class="unit">år</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">Helse:</span>
+                    <span id="hp-display" class="value">100</span>
+                    <span class="unit">%</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">ATP (Energi):</span>
+                    <span id="atp-display" class="value">150</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">Bølge:</span>
+                    <span id="wave-display" class="value">1</span>
+                </div>
             </div>
-            <div class="stat-box">
-                <span class="label">Helse:</span>
-                <span id="hp-display" class="value">100</span>
-                <span class="unit">%</span>
-            </div>
-            <div class="stat-box">
-                <span class="label">ATP (Energi):</span>
-                <span id="atp-display" class="value">150</span>
-            </div>
-            <div class="stat-box">
-                <span class="label">Bølge:</span>
-                <span id="wave-display" class="value">1</span>
+            
+            <!-- NYTT: Vaksine-oversikt -->
+            <div id="vaccine-container">
+                <span class="label">Vaksinert mot:</span>
+                <div id="vaccine-list">
+                    <!-- Ikoner legges til her via JS -->
+                </div>
             </div>
         </header>
 
@@ -146,4 +156,4 @@
     <script src="game.js"></script>
 </body>
 </html>
-<!-- Version: #25 -->
+<!-- Version: #27 -->
