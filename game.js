@@ -1,15 +1,15 @@
-/* Version: #36 */
+/* Version: #41 */
 // === OPPSETT OG KONFIGURASJON ===
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-const canvasContainer = document.getElementById('canvas-container'); // For CSS-effekter
+const canvasContainer = document.getElementById('canvas-container'); 
 
-// DOM-elementer
+// DOM
 const startScreen = document.getElementById('start-screen');
 const gameWrapper = document.getElementById('game-wrapper');
 const startBtn = document.getElementById('start-game-btn');
+const devPanel = document.getElementById('dev-panel'); // Utviklerpanel
 
-// Overlay
 const messageOverlay = document.getElementById('message-overlay');
 const messageTitle = document.getElementById('message-title');
 const messageText = document.getElementById('message-text');
@@ -33,14 +33,22 @@ const btnAntibiotics = document.getElementById('btn-antibiotics');
 const resistanceBar = document.getElementById('resistance-bar');
 const vaccineList = document.getElementById('vaccine-list'); 
 
-// UI-visning
+// Dev Inputs
+const inputSpeed = document.getElementById('dev-speed');
+const inputSpawn = document.getElementById('dev-spawn');
+const inputCluster = document.getElementById('dev-cluster');
+const inputAttack = document.getElementById('dev-attack');
+const inputInflation = document.getElementById('dev-inflation');
+const inputHp = document.getElementById('dev-hp');
+
+// UI
 const uiAge = document.getElementById('age-display');
 const uiHp = document.getElementById('hp-display');
 const uiAtp = document.getElementById('atp-display');
 const uiWave = document.getElementById('wave-display');
-const uiStatus = document.getElementById('status-display'); // NYTT: Status-felt
+const uiStatus = document.getElementById('status-display'); 
 
-// === SPILL-VARIABLER ===
+// === VARIABLER ===
 let gameActive = false;
 let animationId;
 let frameCount = 0;
@@ -48,43 +56,29 @@ let frameCount = 0;
 let enemies = [];
 let towers = []; 
 let projectiles = []; 
-
 let selectedTowerType = null; 
 
-// Tilstander
 let specificDefenseUnlocked = false; 
 let age60Warned = false; 
 let age80Warned = false; 
 
-// Medisin
 let antibioticResistance = 0; 
 let bacteriaResistant = false; 
 let isVaccineTargeting = false; 
 let vaccinatedTypes = []; 
 
-// Sykdom
-const SICKNESS_THRESHOLD = 5; // Antall fiender før man blir "syk"
+const SICKNESS_THRESHOLD = 5; 
 
-// Økonomi
 const BASE_COSTS = {
     skin: 20, mucus: 30, macrophage: 50,
     thelper: 100, bcell: 120, tkiller: 150
 };
 const MED_COSTS = { vaccine: 100, antibiotics: 100 };
 let currentCosts = { ...BASE_COSTS };
-const COST_SCALING = 1.2; 
 
-let playerStats = { 
-    age: 0, 
-    hp: 100, 
-    atp: 150, 
-    wave: 1,
-    isSick: false // Ny status
-};
-
+let playerStats = { age: 0, hp: 100, atp: 150, wave: 1, isSick: false };
 const waypoints = [ { x: 0, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 400 }, { x: 500, y: 400 }, { x: 500, y: 200 }, { x: 800, y: 200 } ];
 
-// === BØLGE KONFIGURASJON ===
 function getAvailableEnemiesForWave(wave) {
     if (wave === 1) return ['virus_red'];
     if (wave === 2) return ['virus_red', 'bacteria_green'];
@@ -116,6 +110,7 @@ function selectTower(type) {
     }
 }
 
+// Koblinger...
 btnSkin.addEventListener('click', () => selectTower('skin'));
 btnMucus.addEventListener('click', () => selectTower('mucus'));
 btnMacrophage.addEventListener('click', () => selectTower('macrophage'));
@@ -133,9 +128,7 @@ btnAntibiotics.addEventListener('click', () => {
     antibioticResistance += 25;
     if (antibioticResistance > 100) antibioticResistance = 100;
     
-    enemies.forEach(enemy => {
-        if (enemy.type.startsWith('bacteria')) enemy.health = 0;
-    });
+    enemies.forEach(enemy => { if (enemy.type.startsWith('bacteria')) enemy.health = 0; });
     updateUI();
 });
 
@@ -155,10 +148,7 @@ canvas.addEventListener('click', (e) => {
     if (isVaccineTargeting) {
         for (const enemy of enemies) {
             const dist = Math.sqrt((enemy.x - x)**2 + (enemy.y - y)**2);
-            if (dist < enemy.radius + 10) { 
-                applyVaccine(enemy); 
-                return;
-            }
+            if (dist < enemy.radius + 10) { applyVaccine(enemy); return; }
         }
         return;
     }
@@ -178,12 +168,7 @@ canvas.addEventListener('click', (e) => {
 
 function applyVaccine(enemy) {
     const type = enemy.type;
-    if (vaccinatedTypes.includes(type)) {
-        alert("Allerede vaksinert.");
-        isVaccineTargeting = false;
-        document.body.style.cursor = "default";
-        return;
-    }
+    if (vaccinatedTypes.includes(type)) { alert("Allerede vaksinert."); isVaccineTargeting = false; document.body.style.cursor = "default"; return; }
     playerStats.atp -= MED_COSTS.vaccine;
     vaccinatedTypes.push(type);
     isVaccineTargeting = false;
@@ -193,7 +178,6 @@ function applyVaccine(enemy) {
     badge.className = 'vaccine-badge';
     badge.style.backgroundColor = enemy.color;
     vaccineList.appendChild(badge);
-
     alert(`Vaksine utviklet!`);
     updateUI();
 }
@@ -208,7 +192,11 @@ function buildTower(x, y, type, cost) {
         case 'tkiller': towers.push(new TKiller(x, y)); break;
     }
     playerStats.atp -= cost;
-    currentCosts[type] *= COST_SCALING;
+    
+    // Bruk inflasjonsfaktor fra dev-meny
+    const inflationFactor = parseFloat(inputInflation.value) || 1.2;
+    currentCosts[type] *= inflationFactor;
+    
     updateCostDisplay();
     updateUI();
 }
@@ -258,6 +246,8 @@ messageBtn.addEventListener('click', () => {
 function initGame() {
     startScreen.classList.add('hidden');
     gameWrapper.classList.remove('hidden');
+    devPanel.classList.remove('hidden'); // Vis dev-panel
+    
     gameActive = true;
     playerStats = { age: 0, hp: 100, atp: 150, wave: 1, isSick: false };
     frameCount = 0;
@@ -275,7 +265,6 @@ function initGame() {
     vaccineList.innerHTML = '';
     currentCosts = { ...BASE_COSTS };
     
-    // Fjern sykdomseffekter hvis de henger igjen
     canvasContainer.classList.remove('sick-state');
     
     updateCostDisplay();
@@ -288,7 +277,7 @@ function gameOver() {
     cancelAnimationFrame(animationId);
     messageTitle.innerText = "GAME OVER";
     messageTitle.style.color = "red";
-    messageText.innerText = `Infeksjonen tok overhånd. Du ble ${playerStats.age} år gammel.`;
+    messageText.innerText = `Du ble ${playerStats.age} år gammel.`;
     messageBtn.innerText = "Prøv igjen";
     messageOverlay.classList.remove('hidden');
 }
@@ -298,7 +287,7 @@ function gameWon() {
     cancelAnimationFrame(animationId);
     messageTitle.innerText = "GRATULERER!";
     messageTitle.style.color = "#ffd700"; 
-    messageText.innerText = `Du har levd et langt og friskt liv til 100 år!`;
+    messageText.innerText = `Du har levd et langt og friskt liv!`;
     messageBtn.innerText = "Start nytt liv";
     messageOverlay.classList.remove('hidden');
 }
@@ -310,13 +299,8 @@ function animate() {
     animationId = requestAnimationFrame(animate);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // --- SJEKK SYKDOMSSTATUS ---
-    if (enemies.length >= SICKNESS_THRESHOLD) {
-        playerStats.isSick = true;
-    } else {
-        playerStats.isSick = false;
-    }
-    // Oppdater UI en gang per frame (kan optimaliseres, men ok for nå)
+    if (enemies.length >= SICKNESS_THRESHOLD) playerStats.isSick = true;
+    else playerStats.isSick = false;
     updateStatusUI();
 
     drawBoard();
@@ -329,21 +313,22 @@ function animate() {
     if (frameCount % 600 === 0) { 
         playerStats.age += 1;
         checkAgeEvents(); 
-        if (playerStats.age % 5 === 0) {
-            playerStats.wave++;
-        }
+        if (playerStats.age % 5 === 0) playerStats.wave++;
         updateUI();
     }
 
-    // --- SPAWN LOGIKK ---
-    let spawnRate = Math.max(20, 90 - (playerStats.wave * 3)); 
-    
+    // --- SPAWN MED FAKTOR ---
+    const spawnFactor = parseFloat(inputSpawn.value) || 1.0;
+    let baseSpawnRate = Math.max(20, 90 - (playerStats.wave * 3)); 
+    let spawnRate = Math.floor(baseSpawnRate / spawnFactor); 
+    if (spawnRate < 10) spawnRate = 10;
+
     if (frameCount % spawnRate === 0) {
         spawnEnemy();
-        let swarmChance = 0.2 + (playerStats.wave * 0.05);
-        if (Math.random() < swarmChance) {
-             spawnEnemy(); 
-        }
+        
+        const clusterFactor = parseFloat(inputCluster.value) || 1.0;
+        let swarmChance = (0.2 + (playerStats.wave * 0.05)) * clusterFactor;
+        if (Math.random() < swarmChance) spawnEnemy(); 
     }
 
     if (frameCount % 120 === 0 && antibioticResistance > 0 && !bacteriaResistant) {
@@ -354,7 +339,6 @@ function animate() {
         bacteriaResistant = true;
         alert("KRITISK: Bakteriene har utviklet full resistens!");
     }
-    
     if (playerStats.hp <= 0) gameOver();
 }
 
@@ -363,7 +347,7 @@ function checkAgeEvents() {
     if (playerStats.age >= 15 && !specificDefenseUnlocked) {
         specificDefenseUnlocked = true;
         specificDefenseBtns.forEach(btn => btn.classList.remove('locked'));
-        pauseAndShowMessage("Kroppen er moden!", "Spesifikt immunforsvar (B/T-celler) er klart!");
+        pauseAndShowMessage("Kroppen er moden!", "Spesifikt immunforsvar klart!");
     }
     if (playerStats.age >= 60 && !age60Warned) {
         age60Warned = true;
@@ -373,9 +357,7 @@ function checkAgeEvents() {
         age80Warned = true;
         pauseAndShowMessage("Svekket forsvar", "80 år. Forsvaret er 50% tregere.");
     }
-    if (playerStats.age >= 100) {
-        gameWon();
-    }
+    if (playerStats.age >= 100) gameWon();
 }
 
 function pauseAndShowMessage(title, text) {
@@ -390,14 +372,17 @@ function pauseAndShowMessage(title, text) {
 
 
 function handleTowers() {
+    // Les angrepshastighet fra dev-panel
+    const attackFactor = parseFloat(inputAttack.value) || 1.0;
+
     for (let i = towers.length - 1; i >= 0; i--) {
         const tower = towers[i];
         if (tower.health !== undefined && tower.health <= 0) {
             towers.splice(i, 1);
             continue;
         }
-        // VIKTIG: Sender nå isSick til tårnet!
-        const projectile = tower.update(enemies, towers, playerStats.age, playerStats.isSick);
+        // Send faktoren med i update
+        const projectile = tower.update(enemies, towers, playerStats.age, playerStats.isSick, attackFactor);
         if (projectile) projectiles.push(projectile);
         tower.draw(ctx);
     }
@@ -415,11 +400,13 @@ function handleProjectiles() {
 function spawnEnemy() {
     const availableTypes = getAvailableEnemiesForWave(playerStats.wave);
     const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-    
     const newEnemy = new Enemy(waypoints, type);
 
     let healthMultiplier = 1 + (playerStats.wave * 0.05); 
-    newEnemy.maxHealth = Math.floor(newEnemy.maxHealth * healthMultiplier);
+    // Multipliser med HP faktor fra dev-panel
+    const hpFactor = parseFloat(inputHp.value) || 1.0;
+    
+    newEnemy.maxHealth = Math.floor(newEnemy.maxHealth * healthMultiplier * hpFactor);
     newEnemy.health = newEnemy.maxHealth;
 
     if (vaccinatedTypes.includes(type)) {
@@ -432,9 +419,14 @@ function spawnEnemy() {
 }
 
 function handleEnemies() {
+    // Les fart-faktor fra dev-panel
+    const speedFactor = parseFloat(inputSpeed.value) || 1.0;
+
     for (let i = enemies.length - 1; i >= 0; i--) {
         const enemy = enemies[i];
-        const status = enemy.update(towers); 
+        
+        // Send fart-faktor
+        const status = enemy.update(towers, speedFactor); 
         
         if (bacteriaResistant && enemy.type.startsWith('bacteria')) {
             ctx.strokeStyle = "gold";
@@ -460,36 +452,26 @@ function handleEnemies() {
 }
 
 function drawBoard() {
-    ctx.beginPath();
-    ctx.lineWidth = 60; 
-    ctx.strokeStyle = "#5a1a1a"; 
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.lineWidth = 60; ctx.strokeStyle = "#5a1a1a"; 
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
     ctx.moveTo(waypoints[0].x, waypoints[0].y);
-    for (let i = 1; i < waypoints.length; i++) {
-        ctx.lineTo(waypoints[i].x, waypoints[i].y);
-    }
+    for (let i = 1; i < waypoints.length; i++) ctx.lineTo(waypoints[i].x, waypoints[i].y);
     ctx.stroke(); 
-    ctx.beginPath();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
     ctx.moveTo(waypoints[0].x, waypoints[0].y);
-    for (let i = 1; i < waypoints.length; i++) {
-        ctx.lineTo(waypoints[i].x, waypoints[i].y);
-    }
+    for (let i = 1; i < waypoints.length; i++) ctx.lineTo(waypoints[i].x, waypoints[i].y);
     ctx.stroke();
 }
 
-// NY FUNKSJON: Oppdaterer kun status-delen (for å håndtere blinking/CSS)
 function updateStatusUI() {
     if (playerStats.isSick) {
         uiStatus.innerText = "INFEKSJON!";
-        uiStatus.style.color = "#ff4d4d"; // Rød
-        uiStatus.classList.add('text-blink'); // Blinkende tekst
-        canvasContainer.classList.add('sick-state'); // Grønn kant på brettet
+        uiStatus.style.color = "#ff4d4d"; 
+        uiStatus.classList.add('text-blink'); 
+        canvasContainer.classList.add('sick-state'); 
     } else {
         uiStatus.innerText = "Frisk";
-        uiStatus.style.color = "#32cd32"; // Grønn
+        uiStatus.style.color = "#32cd32"; 
         uiStatus.classList.remove('text-blink');
         canvasContainer.classList.remove('sick-state');
     }
@@ -500,15 +482,13 @@ function updateUI() {
     uiHp.innerText = playerStats.hp;
     uiAtp.innerText = Math.floor(playerStats.atp); 
     uiWave.innerText = playerStats.wave;
-    
     if (playerStats.hp < 30) uiHp.style.color = 'red';
     else uiHp.style.color = '#32cd32';
-
     resistanceBar.style.width = antibioticResistance + '%';
     if (antibioticResistance < 50) resistanceBar.style.backgroundColor = '#32cd32';
     else if (antibioticResistance < 80) resistanceBar.style.backgroundColor = 'orange';
     else resistanceBar.style.backgroundColor = 'red';
 }
 
-console.log("game.js lastet (Versjon #36). Fullt spill med sykdomslogikk.");
-/* Version: #36 */
+console.log("game.js lastet (Versjon #41). Balanseringspanel aktivert.");
+/* Version: #41 */
