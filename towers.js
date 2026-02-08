@@ -1,4 +1,4 @@
-/* Version: #23 */
+/* Version: #35 */
 class Tower {
     constructor(x, y) {
         this.x = x;
@@ -8,7 +8,7 @@ class Tower {
         this.range = 100;
         this.damage = 10;
         this.fireRate = 0; 
-        this.cooldownSpeed = 1; // Hvor mye fireRate minker per frame (Standard: 1)
+        this.cooldownSpeed = 1; 
         this.target = null;
         this.type = 'turret'; 
         this.isBuffed = false; 
@@ -19,39 +19,41 @@ class Tower {
         ctx.fillRect(this.x - 16, this.y - 16, this.width, this.height);
     }
 
-    // NYTT: Tar imot 'age' for å beregne effektivitet
-    update(enemies, allTowers, age) {
+    // NYTT PARAMETER: isSick
+    update(enemies, allTowers, age, isSick) {
         
-        // --- 1. Beregn effektivitet basert på alder og buffs ---
+        // --- 1. Beregn effektivitet ---
+        
+        // Aldring
         let agingFactor = 1.0;
-        
-        // Aldringsmekanikk: Immunforsvaret svekkes med alderen
         if (age >= 80) {
-            agingFactor = 0.5; // 50% tregere respons i svært høy alder
+            agingFactor = 0.5; 
         } else if (age >= 60) {
-            agingFactor = 0.7; // 30% tregere fra 60 år
+            agingFactor = 0.7; 
         }
 
-        let buffFactor = this.isBuffed ? 2.0 : 1.0; // Dobbel fart hvis T-Hjelper er nær
+        // T-Hjelper Buff
+        let buffFactor = this.isBuffed ? 2.0 : 1.0; 
 
-        // Den faktiske hastigheten vi lader kanonen/fordøyer med
-        let recoverySpeed = this.cooldownSpeed * agingFactor * buffFactor;
+        // Sykdom (Infeksjon)
+        // Hvis kroppen er syk, jobber cellene 20% tregere
+        let sicknessFactor = isSick ? 0.8 : 1.0;
+
+        // Total ladehastighet
+        let recoverySpeed = this.cooldownSpeed * agingFactor * buffFactor * sicknessFactor;
 
         // --- 2. Håndter Cooldown ---
         if (this.fireRate > 0) {
             this.fireRate -= recoverySpeed;
             
-            // Hvis vi er nære nok 0, nullstill
             if (this.fireRate <= 0) {
                 this.fireRate = 0;
             } else {
-                // Hvis vi fortsatt lader, reset isBuffed (den settes på nytt av T-Hjelper hver frame)
                 this.isBuffed = false;
-                return null; // Kan ikke skyte enda
+                return null; 
             }
         }
 
-        // Reset isBuffed for denne framen (må settes på nytt av nabo-T-Hjelper)
         this.isBuffed = false; 
 
         // --- 3. Finn mål ---
@@ -146,8 +148,7 @@ class Skin extends Tower {
         this.height = 40;
     }
 
-    update(enemies, allTowers, age) {
-        // Hud er passiv, men vi må resette buff-state for å unngå feil
+    update(enemies, allTowers, age, isSick) {
         this.isBuffed = false; 
         return null;
     }
@@ -165,8 +166,7 @@ class Skin extends Tower {
         ctx.lineTo(this.x + 20, this.y);
         ctx.stroke();
 
-        // Helsebar
-        const hpPct = Math.max(0, this.health / this.maxHealth); // Sikring mot negativ verdi
+        const hpPct = Math.max(0, this.health / this.maxHealth); 
         ctx.fillStyle = 'red';
         ctx.fillRect(this.x - 20, this.y - 30, 40, 5);
         ctx.fillStyle = '#32cd32';
@@ -184,7 +184,7 @@ class Mucus extends Tower {
         this.slowFactor = 0.5; 
     }
 
-    update(enemies, allTowers, age) {
+    update(enemies, allTowers, age, isSick) {
         this.isBuffed = false;
         return null;
     }
@@ -290,13 +290,11 @@ class THelper extends Tower {
     }
 
     draw(ctx) {
-        // Tegn rekkevidde svakt
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
         ctx.strokeStyle = 'rgba(155, 89, 182, 0.2)';
         ctx.stroke();
 
-        // Puls
         this.pulseSize += 0.5;
         if (this.pulseSize > this.range) this.pulseSize = 0;
         
@@ -305,7 +303,6 @@ class THelper extends Tower {
         ctx.strokeStyle = 'rgba(155, 89, 182, 0.1)'; 
         ctx.stroke();
 
-        // Cellen
         ctx.beginPath();
         ctx.arc(this.x, this.y, 16, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
@@ -318,9 +315,7 @@ class THelper extends Tower {
         ctx.fillText("+", this.x, this.y + 2);
     }
 
-    update(enemies, allTowers, age) {
-        // T-Hjelper effekten svekkes IKKE av alder (pedagogisk valg: lederen er fortsatt leder),
-        // men vi må finne naboer å buffe.
+    update(enemies, allTowers, age, isSick) {
         if (allTowers) {
             for (const otherTower of allTowers) {
                 if (otherTower === this || otherTower.type === 'barrier' || otherTower.type === 'trap') continue;
@@ -338,5 +333,5 @@ class THelper extends Tower {
     }
 }
 
-console.log("towers.js lastet (Versjon #23). Aldringseffekter implementert.");
-/* Version: #23 */
+console.log("towers.js lastet (Versjon #35). Sykdoms-logikk inkludert.");
+/* Version: #35 */
