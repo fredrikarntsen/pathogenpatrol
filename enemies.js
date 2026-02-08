@@ -1,4 +1,4 @@
-/* Version: #32 */
+/* Version: #39 */
 class Enemy {
     constructor(waypoints, type) {
         this.waypoints = waypoints;
@@ -20,14 +20,10 @@ class Enemy {
     }
 
     initTypeProperties() {
-        // BALANSERING AV ØKONOMI:
-        // Verdiene er kraftig redusert for å unngå at man kan "spam-bygge" tårn.
-        
-        // VIRUS (Primærfarger)
         if (this.type === 'virus_red') {
             this.baseSpeed = 2.0;   
             this.health = 20;       
-            this.moneyValue = 2;    // Før: 5
+            this.moneyValue = 2;    
             this.color = '#ff0000'; 
             this.radius = 12;
             this.shape = 'circle';
@@ -35,7 +31,7 @@ class Enemy {
         else if (this.type === 'virus_blue') {
             this.baseSpeed = 2.5; 
             this.health = 30;
-            this.moneyValue = 3;    // Før: 7
+            this.moneyValue = 3;    
             this.color = '#0000ff'; 
             this.radius = 12;
             this.shape = 'circle';
@@ -43,16 +39,15 @@ class Enemy {
         else if (this.type === 'virus_yellow') {
             this.baseSpeed = 3.0; 
             this.health = 15;     
-            this.moneyValue = 1;    // Før: 5 (disse kommer i svermer, så må være billige)
+            this.moneyValue = 1;    
             this.color = '#ffff00'; 
             this.radius = 10;
             this.shape = 'circle';
         }
-        // BAKTERIER (Sekundærfarger og ulike former)
         else if (this.type === 'bacteria_green') {
             this.baseSpeed = 1.0;   
             this.health = 60;       
-            this.moneyValue = 8;    // Før: 15
+            this.moneyValue = 8;    
             this.color = '#00ff00'; 
             this.radius = 18;
             this.shape = 'circle'; 
@@ -60,7 +55,7 @@ class Enemy {
         else if (this.type === 'bacteria_orange') {
             this.baseSpeed = 1.2;
             this.health = 80;
-            this.moneyValue = 10;   // Før: 20
+            this.moneyValue = 10;   
             this.color = '#ffa500'; 
             this.radius = 18;
             this.shape = 'oval';
@@ -68,7 +63,7 @@ class Enemy {
         else if (this.type === 'bacteria_purple') {
             this.baseSpeed = 0.8; 
             this.health = 120;    
-            this.moneyValue = 15;   // Før: 30
+            this.moneyValue = 15;   
             this.color = '#800080'; 
             this.radius = 20;
             this.shape = 'triangle';
@@ -109,10 +104,8 @@ class Enemy {
 
     drawHealthBar(ctx) {
         const hpPercent = Math.max(0, this.health / this.maxHealth);
-        
         const barWidth = 30;
         const barHeight = 4;
-        
         const yOffset = (this.shape === 'triangle') ? this.radius + 5 : 10;
 
         ctx.fillStyle = 'red';
@@ -124,8 +117,11 @@ class Enemy {
         }
     }
 
-    update(towers) {
-        this.speed = this.baseSpeed;
+    // NYTT: speedFactor argument
+    update(towers, speedFactor = 1.0) {
+        // Juster baseSpeed med faktor
+        this.speed = this.baseSpeed * speedFactor;
+        
         let isBlocked = false;
 
         if (towers) {
@@ -179,4 +175,4 @@ class Enemy {
         return 'active';
     }
 }
-/* Version: #32 */
+/* Version: #39 */
