@@ -1,4 +1,4 @@
-<!-- Version: #34 -->
+<!-- Version: #37 -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -30,6 +30,37 @@
         </div>
     </div>
 
+    <!-- UTVIKLER-MENY (Høyre side) -->
+    <aside id="dev-panel" class="hidden">
+        <h3>Spill-Balanse</h3>
+        <div class="setting-group">
+            <label for="dev-speed">Fiende Fart (x):</label>
+            <input type="number" id="dev-speed" value="1.0" step="0.1" min="0.1" max="5.0">
+        </div>
+        <div class="setting-group">
+            <label for="dev-spawn">Spawn Rate (x):</label>
+            <input type="number" id="dev-spawn" value="1.0" step="0.1" min="0.1" max="5.0">
+            <small>(Høyere tall = oftere)</small>
+        </div>
+        <div class="setting-group">
+            <label for="dev-cluster">Sverm Sjanse (x):</label>
+            <input type="number" id="dev-cluster" value="1.0" step="0.1" min="0.0" max="5.0">
+        </div>
+        <div class="setting-group">
+            <label for="dev-attack">Tårn Fart (x):</label>
+            <input type="number" id="dev-attack" value="1.0" step="0.1" min="0.1" max="5.0">
+        </div>
+        <div class="setting-group">
+            <label for="dev-inflation">Prisøkning (x):</label>
+            <input type="number" id="dev-inflation" value="1.2" step="0.05" min="1.0" max="2.0">
+            <small>(Standard 1.2 = 20%)</small>
+        </div>
+        <div class="setting-group">
+            <label for="dev-hp">Fiende Helse (x):</label>
+            <input type="number" id="dev-hp" value="1.0" step="0.1" min="0.1" max="5.0">
+        </div>
+    </aside>
+
     <!-- SELVE SPILLET (Skjult i starten) -->
     <div id="game-wrapper" class="hidden">
         
@@ -41,7 +72,6 @@
                     <span id="age-display" class="value">0</span> 
                     <span class="unit">år</span>
                 </div>
-                <!-- NYTT: Status-indikator -->
                 <div class="stat-box">
                     <span class="label">Status:</span>
                     <span id="status-display" class="value" style="color: #32cd32;">Frisk</span> 
@@ -75,7 +105,7 @@
             <!-- Selve spillbrettet -->
             <canvas id="game-canvas" width="800" height="600"></canvas>
             
-            <!-- Overlay for beskjeder (Game Over, Level Up, Resistens-varsel) -->
+            <!-- Overlay for beskjeder -->
             <div id="message-overlay" class="hidden">
                 <div class="message-content">
                     <h2 id="message-title">Overskrift</h2>
@@ -88,56 +118,55 @@
         <!-- BUNN-PANEL: Kontroller for forsvar og medisin -->
         <footer id="controls-bar">
             
-            <!-- Gruppe 1: Barriere og Uspesifikt (Starten) -->
+            <!-- Gruppe 1: Barriere og Uspesifikt -->
             <div class="control-group">
                 <h3>Ytre/Uspesifikt</h3>
                 <div class="button-grid">
-                    <button class="tower-btn" id="btn-skin" title="Hud: Fysisk mur som blokkerer veien">
+                    <button class="tower-btn" id="btn-skin" title="Hud">
                         Hud
                         <span class="cost">20 ATP</span>
                     </button>
-                    <button class="tower-btn" id="btn-mucus" title="Slimhinner: Felle som bremser fiender">
+                    <button class="tower-btn" id="btn-mucus" title="Slim">
                         Slim
                         <span class="cost">30 ATP</span>
                     </button>
-                    <button class="tower-btn" id="btn-macrophage" title="Makrofag: Spiser fiender i nærkamp">
+                    <button class="tower-btn" id="btn-macrophage" title="Makrofag">
                         Makrofag
                         <span class="cost">50 ATP</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Gruppe 2: Spesifikt Forsvar (Må låses opp) -->
+            <!-- Gruppe 2: Spesifikt Forsvar -->
             <div class="control-group">
                 <h3>Spesifikt</h3>
                 <div class="button-grid">
-                    <button class="tower-btn locked" id="btn-t-helper" title="T-Hjelper: Forsterker celler rundt seg">
+                    <button class="tower-btn locked" id="btn-t-helper" title="T-Hjelper">
                         T-Hjelp
                         <span class="cost">100 ATP</span>
                     </button>
-                    <button class="tower-btn locked" id="btn-b-cell" title="B-Celle: Skyter antistoffer (lang rekkevidde)">
+                    <button class="tower-btn locked" id="btn-b-cell" title="B-Celle">
                         B-Celle
                         <span class="cost">120 ATP</span>
                     </button>
-                    <button class="tower-btn locked" id="btn-t-killer" title="T-Dreper: Høy skade mot sterke fiender">
+                    <button class="tower-btn locked" id="btn-t-killer" title="T-Drep">
                         T-Drep
                         <span class="cost">150 ATP</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Gruppe 3: Medisiner og Power-ups -->
+            <!-- Gruppe 3: Medisiner -->
             <div class="control-group special-group">
                 <h3>Medisin</h3>
                 <div class="button-grid">
-                    <button class="action-btn" id="btn-vaccine" title="Vaksine: Gjør immunsystemet sterkere mot en fiende">
+                    <button class="action-btn" id="btn-vaccine" title="Vaksine">
                         Vaksine
                         <span class="cost">100 ATP</span>
                     </button>
                     
-                    <!-- Antibiotika med resistens-måler -->
                     <div class="antibiotics-wrapper">
-                        <button class="action-btn" id="btn-antibiotics" title="Antibiotika: Dreper alle bakterier (OBS: Resistensfare!)">
+                        <button class="action-btn" id="btn-antibiotics" title="Antibiotika">
                             Antibiotika
                             <span class="cost">100 ATP</span>
                         </button>
@@ -152,13 +181,16 @@
             </div>
 
         </footer>
+        
+        <!-- Spacer for å sikre at man kan scrolle helt ned -->
+        <div class="spacer" style="height: 50px;"></div>
     </div>
 
-    <!-- Scripts: Lastes i riktig rekkefølge -->
+    <!-- Scripts -->
     <script src="enemies.js"></script>
     <script src="projectiles.js"></script>
     <script src="towers.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
-<!-- Version: #34 -->
+<!-- Version: #37 -->
