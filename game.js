@@ -1,7 +1,8 @@
-/* Version: #31 */
+/* Version: #36 */
 // === OPPSETT OG KONFIGURASJON ===
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
+const canvasContainer = document.getElementById('canvas-container'); // For CSS-effekter
 
 // DOM-elementer
 const startScreen = document.getElementById('start-screen');
@@ -37,6 +38,7 @@ const uiAge = document.getElementById('age-display');
 const uiHp = document.getElementById('hp-display');
 const uiAtp = document.getElementById('atp-display');
 const uiWave = document.getElementById('wave-display');
+const uiStatus = document.getElementById('status-display'); // NYTT: Status-felt
 
 // === SPILL-VARIABLER ===
 let gameActive = false;
@@ -60,6 +62,9 @@ let bacteriaResistant = false;
 let isVaccineTargeting = false; 
 let vaccinatedTypes = []; 
 
+// Sykdom
+const SICKNESS_THRESHOLD = 5; // Antall fiender før man blir "syk"
+
 // Økonomi
 const BASE_COSTS = {
     skin: 20, mucus: 30, macrophage: 50,
@@ -69,24 +74,22 @@ const MED_COSTS = { vaccine: 100, antibiotics: 100 };
 let currentCosts = { ...BASE_COSTS };
 const COST_SCALING = 1.2; 
 
-let playerStats = { age: 0, hp: 100, atp: 150, wave: 1 };
+let playerStats = { 
+    age: 0, 
+    hp: 100, 
+    atp: 150, 
+    wave: 1,
+    isSick: false // Ny status
+};
+
 const waypoints = [ { x: 0, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 400 }, { x: 500, y: 400 }, { x: 500, y: 200 }, { x: 800, y: 200 } ];
 
-// === BØLGE KONFIGURASJON (OPPDATERT) ===
+// === BØLGE KONFIGURASJON ===
 function getAvailableEnemiesForWave(wave) {
-    // Bølge 1 (0-5 år): Introduksjon (Kun røde virus)
     if (wave === 1) return ['virus_red'];
-    
-    // Bølge 2 (5-10 år): Miks! (Røde virus + Grønne bakterier)
     if (wave === 2) return ['virus_red', 'bacteria_green'];
-    
-    // Bølge 3-5 (10-25 år): Økende intensitet (Blå virus kommer)
     if (wave <= 5) return ['virus_red', 'virus_blue', 'bacteria_green'];
-    
-    // Bølge 6-9 (25-45 år): Svermer (Gule virus + Oransje bakterier)
     if (wave <= 9) return ['virus_blue', 'virus_yellow', 'bacteria_green', 'bacteria_orange'];
-    
-    // Bølge 10+ (45+ år): Fullt kaos (Boss bakterier)
     return ['virus_red', 'virus_blue', 'virus_yellow', 'bacteria_green', 'bacteria_orange', 'bacteria_purple'];
 }
 
@@ -256,7 +259,7 @@ function initGame() {
     startScreen.classList.add('hidden');
     gameWrapper.classList.remove('hidden');
     gameActive = true;
-    playerStats = { age: 0, hp: 100, atp: 150, wave: 1 };
+    playerStats = { age: 0, hp: 100, atp: 150, wave: 1, isSick: false };
     frameCount = 0;
     enemies = [];
     towers = [];
@@ -271,6 +274,10 @@ function initGame() {
     isVaccineTargeting = false;
     vaccineList.innerHTML = '';
     currentCosts = { ...BASE_COSTS };
+    
+    // Fjern sykdomseffekter hvis de henger igjen
+    canvasContainer.classList.remove('sick-state');
+    
     updateCostDisplay();
     updateUI();
     animate();
@@ -303,6 +310,15 @@ function animate() {
     animationId = requestAnimationFrame(animate);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // --- SJEKK SYKDOMSSTATUS ---
+    if (enemies.length >= SICKNESS_THRESHOLD) {
+        playerStats.isSick = true;
+    } else {
+        playerStats.isSick = false;
+    }
+    // Oppdater UI en gang per frame (kan optimaliseres, men ok for nå)
+    updateStatusUI();
+
     drawBoard();
     handleTowers();
     handleProjectiles();
@@ -310,7 +326,6 @@ function animate() {
 
     frameCount++;
 
-    // Alder
     if (frameCount % 600 === 0) { 
         playerStats.age += 1;
         checkAgeEvents(); 
@@ -320,19 +335,13 @@ function animate() {
         updateUI();
     }
 
-    // --- SPAWN LOGIKK (RASKERE!) ---
-    // Start på 90 frames (1.5 sek), går ned mot 20 frames (0.33 sek)
+    // --- SPAWN LOGIKK ---
     let spawnRate = Math.max(20, 90 - (playerStats.wave * 3)); 
     
     if (frameCount % spawnRate === 0) {
-        // Hoved-spawn
         spawnEnemy();
-        
-        // SVERM-LOGIKK: Sjanse for å spawne flere samtidig!
-        // Jo høyere bølge, jo større sjanse for "dobbel spawn"
-        let swarmChance = 0.2 + (playerStats.wave * 0.05); // Starter på 20%, øker til 50%+
+        let swarmChance = 0.2 + (playerStats.wave * 0.05);
         if (Math.random() < swarmChance) {
-             // Spawn en til umiddelbart (liten forsinkelse visuelt bare pga frame, men i praksis samtidig)
              spawnEnemy(); 
         }
     }
@@ -387,7 +396,8 @@ function handleTowers() {
             towers.splice(i, 1);
             continue;
         }
-        const projectile = tower.update(enemies, towers, playerStats.age);
+        // VIKTIG: Sender nå isSick til tårnet!
+        const projectile = tower.update(enemies, towers, playerStats.age, playerStats.isSick);
         if (projectile) projectiles.push(projectile);
         tower.draw(ctx);
     }
@@ -408,7 +418,6 @@ function spawnEnemy() {
     
     const newEnemy = new Enemy(waypoints, type);
 
-    // Helse-skalering (10% mer per 5. bølge)
     let healthMultiplier = 1 + (playerStats.wave * 0.05); 
     newEnemy.maxHealth = Math.floor(newEnemy.maxHealth * healthMultiplier);
     newEnemy.health = newEnemy.maxHealth;
@@ -471,6 +480,21 @@ function drawBoard() {
     ctx.stroke();
 }
 
+// NY FUNKSJON: Oppdaterer kun status-delen (for å håndtere blinking/CSS)
+function updateStatusUI() {
+    if (playerStats.isSick) {
+        uiStatus.innerText = "INFEKSJON!";
+        uiStatus.style.color = "#ff4d4d"; // Rød
+        uiStatus.classList.add('text-blink'); // Blinkende tekst
+        canvasContainer.classList.add('sick-state'); // Grønn kant på brettet
+    } else {
+        uiStatus.innerText = "Frisk";
+        uiStatus.style.color = "#32cd32"; // Grønn
+        uiStatus.classList.remove('text-blink');
+        canvasContainer.classList.remove('sick-state');
+    }
+}
+
 function updateUI() {
     uiAge.innerText = playerStats.age;
     uiHp.innerText = playerStats.hp;
@@ -486,5 +510,5 @@ function updateUI() {
     else resistanceBar.style.backgroundColor = 'red';
 }
 
-console.log("game.js lastet (Versjon #31). Høyere tempo og kaos!");
-/* Version: #31 */
+console.log("game.js lastet (Versjon #36). Fullt spill med sykdomslogikk.");
+/* Version: #36 */
