@@ -1,4 +1,4 @@
-/* Version: #33 */
+/* Version: #38 */
 :root {
     --bg-color: #2c0a0a; 
     --panel-bg: #4a1515; 
@@ -25,11 +25,13 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
-    height: 100vh;
+    /* Endret fra height: 100vh og overflow: hidden til auto for å tillate scrolling */
+    min-height: 100vh;
     display: flex;
     justify-content: center;
-    align-items: center;
-    overflow: hidden; 
+    align-items: flex-start; /* Juster mot toppen så vi kan scrolle */
+    padding-top: 20px;
+    overflow-y: auto; 
 }
 
 .hidden { display: none !important; }
@@ -42,6 +44,56 @@ button {
     transition: all 0.2s ease;
 }
 
+/* === UTVIKLER PANEL === */
+#dev-panel {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    width: 200px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid var(--accent-color);
+    z-index: 1000;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+#dev-panel h3 {
+    margin-bottom: 10px;
+    color: var(--color-atp);
+    font-size: 1rem;
+    text-align: center;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+}
+
+.setting-group {
+    margin-bottom: 10px;
+}
+
+.setting-group label {
+    display: block;
+    font-size: 0.8rem;
+    color: #ccc;
+    margin-bottom: 3px;
+}
+
+.setting-group input {
+    width: 100%;
+    background: #333;
+    border: 1px solid #555;
+    color: white;
+    padding: 4px;
+    border-radius: 3px;
+}
+
+.setting-group small {
+    display: block;
+    font-size: 0.65rem;
+    color: #888;
+    margin-top: 2px;
+}
+
 /* === STARTSKJERM === */
 #start-screen {
     text-align: center;
@@ -51,6 +103,7 @@ button {
     border-radius: 20px;
     box-shadow: 0 0 50px rgba(0,0,0,0.5);
     border: 2px solid var(--accent-color);
+    margin-top: 50px;
 }
 
 #start-screen h1 {
@@ -103,7 +156,7 @@ button {
     align-items: center;
     width: 100%;
     max-width: 1000px;
-    height: 95vh;
+    /* Fjernet fast høyde for å tillate scrolling */
 }
 
 /* === TOPP PANEL (STATS) === */
@@ -114,7 +167,7 @@ button {
     border-radius: 10px 10px 0 0;
     border-bottom: 2px solid var(--locked-color);
     display: flex;
-    flex-direction: column; /* Stack stats og vaksiner */
+    flex-direction: column; 
     gap: 10px;
 }
 
@@ -131,7 +184,6 @@ button {
 #hp-display { color: var(--color-hp); }
 #atp-display { color: var(--color-atp); }
 
-/* Vaksine liste */
 #vaccine-container {
     display: flex;
     align-items: center;
@@ -146,10 +198,7 @@ button {
     margin-right: 10px;
 }
 
-#vaccine-list {
-    display: flex;
-    gap: 5px;
-}
+#vaccine-list { display: flex; gap: 5px; }
 
 .vaccine-badge {
     width: 20px;
@@ -165,7 +214,7 @@ button {
     border: 5px solid var(--panel-bg);
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
     background-color: #1a0505; 
-    transition: all 0.5s ease; /* Myk overgang til sykdom */
+    transition: all 0.5s ease;
 }
 
 #game-canvas {
@@ -309,9 +358,7 @@ button {
     transition: width 0.3s ease, background-color 0.3s ease;
 }
 
-/* === SYKDOMS-EFFEKT (NY) === */
-
-/* Animasjon for pulserende grønn kant */
+/* === SYKDOMS-EFFEKT === */
 @keyframes sick-pulse {
     0% {
         box-shadow: inset 0 0 20px 10px rgba(46, 204, 113, 0.3);
@@ -327,12 +374,6 @@ button {
     animation: sick-pulse 1.5s infinite alternate ease-in-out;
 }
 
-/* Blink-effekt for tekst */
-@keyframes blink-text {
-    50% { opacity: 0.5; }
-}
-
-.text-blink {
-    animation: blink-text 1s infinite;
-}
-/* Version: #33 */
+@keyframes blink-text { 50% { opacity: 0.5; } }
+.text-blink { animation: blink-text 1s infinite; }
+/* Version: #38 */
